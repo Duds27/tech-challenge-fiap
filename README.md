@@ -37,6 +37,14 @@ API REST para gestão de uma oficina mecânica de médio porte, desenvolvida com
 
 ---
 
+# Domain Storytelling
+
+![Fluxo - Gestão de peças e insumos](docs/gestao-pecas-e-insumos.png)
+
+![Fluxo - Criação e acompanhamento de OS](docs/criacao-e-acompanhamento-de-os.png)
+
+# Event Storming
+
 ## Stack Tecnológica
 
 | Camada         | Tecnologia                                                 |
