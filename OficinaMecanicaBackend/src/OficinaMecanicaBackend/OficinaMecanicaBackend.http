@@ -1,0 +1,6 @@
+@OficinaMecanicaBackend_HostAddress = http://localhost:5288
+
+GET {{OficinaMecanicaBackend_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
