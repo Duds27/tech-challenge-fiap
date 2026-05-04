@@ -7,7 +7,7 @@ COPY src/OficinaMecanicaBackend/OficinaMecanicaBackend.csproj src/OficinaMecanic
 RUN dotnet restore src/OficinaMecanicaBackend/OficinaMecanicaBackend.csproj
 
 COPY src/OficinaMecanicaBackend/ src/OficinaMecanicaBackend/
-RUN dotnet publish src/OficinaMecanicaBackend/OficinaMecanicaBackend.csproj -c Release -o /publish --no-restore
+RUN dotnet publish src/OficinaMecanicaBackend/OficinaMecanicaBackend.csproj -c Release -o /publish
 
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
