@@ -82,7 +82,6 @@ logs/
 
 # Docker
 .docker/
-.dockerignore
 
 # OS
 .DS_Store
