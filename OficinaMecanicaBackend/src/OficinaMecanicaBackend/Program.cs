@@ -26,7 +26,7 @@ try
         ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
     builder.Services.AddDbContext<AppDbContext>(options =>
-        options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+        options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 4, 0))));
 
     // Add services to the container.
 
