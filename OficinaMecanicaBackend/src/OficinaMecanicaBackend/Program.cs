@@ -1,6 +1,13 @@
-
+using System.Text;
+using FluentValidation;
+using FluentValidation.AspNetCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using OficinaMecanicaBackend.Data;
+using OficinaMecanicaBackend.Services;
+using OficinaMecanicaBackend.Validators;
 using Serilog;
 
 Log.Logger = new LoggerConfiguration()
@@ -13,7 +20,6 @@ try
 {
     var builder = WebApplication.CreateBuilder(args);
 
-    // Use Serilog for logging
     builder.Host.UseSerilog((ctx, services, cfg) => cfg
         .ReadFrom.Configuration(ctx.Configuration)
         .ReadFrom.Services(services)
@@ -28,28 +34,81 @@ try
     builder.Services.AddDbContext<AppDbContext>(options =>
         options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 4, 0))));
 
-    // Add services to the container.
+    // JWT Authentication
+    var jwtKey = builder.Configuration["Jwt:Key"]
+        ?? throw new InvalidOperationException("Jwt:Key não configurado.");
+    var jwtIssuer = builder.Configuration["Jwt:Issuer"]!;
+    var jwtAudience = builder.Configuration["Jwt:Audience"]!;
 
-    // Controllers
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
+        {
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(jwtKey)),
+                ValidateIssuer = true,
+                ValidIssuer = jwtIssuer,
+                ValidateAudience = true,
+                ValidAudience = jwtAudience,
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.Zero
+            };
+        });
+
+    builder.Services.AddAuthorization();
+
+    // Controllers + FluentValidation
     builder.Services.AddControllers();
+    builder.Services.AddFluentValidationAutoValidation();
+    builder.Services.AddValidatorsFromAssemblyContaining<CreateClienteValidator>();
 
-    // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+    // Domain services
+    builder.Services.AddScoped<AuthService>();
+    builder.Services.AddScoped<ClienteService>();
+    builder.Services.AddScoped<VeiculoService>();
+    builder.Services.AddScoped<PecaService>();
+    builder.Services.AddScoped<ServicoService>();
+    builder.Services.AddScoped<OrdemServicoService>();
+
+    // Swagger with JWT support
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen(c =>
     {
-        c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo() { Title = "OficinaMecanicaBackend API", Version = "v1" });
+        c.SwaggerDoc("v1", new OpenApiInfo { Title = "OficinaMecanicaBackend API", Version = "v1" });
+
+        c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+        {
+            Description = "JWT Authorization header usando Bearer scheme. Exemplo: 'Bearer {token}'",
+            Name = "Authorization",
+            In = ParameterLocation.Header,
+            Type = SecuritySchemeType.ApiKey,
+            Scheme = "Bearer"
+        });
+
+        c.AddSecurityRequirement(new OpenApiSecurityRequirement
+        {
+            {
+                new OpenApiSecurityScheme
+                {
+                    Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
+                },
+                Array.Empty<string>()
+            }
+        });
     });
 
     var app = builder.Build();
 
-    // Apply pending EF Core migrations automatically on startup
     using (var scope = app.Services.CreateScope())
     {
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        db.Database.Migrate();
+        if (db.Database.IsRelational())
+            db.Database.Migrate();
+        else
+            db.Database.EnsureCreated();
     }
 
-    // Configure the HTTP request pipeline.
     if (app.Environment.IsDevelopment())
     {
         app.UseSwagger();
@@ -58,12 +117,13 @@ try
 
     app.UseHttpsRedirection();
     app.UseSerilogRequestLogging();
+    app.UseAuthentication();
     app.UseAuthorization();
     app.MapControllers();
 
     app.Run();
 }
-catch (HostAbortedException ex)
+catch (HostAbortedException)
 {
     throw;
 }
