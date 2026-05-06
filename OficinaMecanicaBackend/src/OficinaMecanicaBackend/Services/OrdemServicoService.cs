@@ -186,9 +186,11 @@ public class OrdemServicoService
                 DataCriacao = DateTime.UtcNow
             };
 
+            // Capture existing total BEFORE Add() so EF change tracker doesn't double-count
+            var existingTotal = ordem.Itens.Sum(i => i.PrecoTotal);
             _db.ItensOrdemServico.Add(item);
 
-            ordem.ValorTotal = ordem.Itens.Sum(i => i.PrecoTotal) + item.PrecoTotal;
+            ordem.ValorTotal = existingTotal + item.PrecoTotal;
             ordem.DataAtualizacao = DateTime.UtcNow;
 
             await _db.SaveChangesAsync();
