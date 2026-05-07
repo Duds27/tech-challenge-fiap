@@ -1,0 +1,80 @@
+# ============================================================
+# OWASP ZAP Automation Framework — OficinaMecanicaBackend
+# Uso: docker run --rm -v $(pwd)/reports:/zap/wrk \
+#        ghcr.io/zaproxy/zaproxy:stable \
+#        zap.sh -cmd -autorun /zap/wrk/zap-automation.yaml
+# ============================================================
+env:
+  contexts:
+    - name: OficinaMecanicaBackend
+      urls:
+        - http://host.docker.internal:8080
+      includePaths:
+        - http://host.docker.internal:8080/api/.*
+      excludePaths:
+        - http://host.docker.internal:8080/swagger/.*
+        - http://host.docker.internal:8080/health
+
+      authentication:
+        method: json
+        parameters:
+          loginUrl: http://host.docker.internal:8080/api/auth/login
+          loginRequestData: '{"username":"admin","password":"Admin@123"}'
+        verification:
+          method: response
+          loggedInRegex: "\"token\":"
+          loggedOutRegex: "Usuário ou senha inválidos"
+
+      sessionManagement:
+        method: headers
+        parameters:
+          headerValue: "Bearer {%json:token%}"
+
+      users:
+        - name: Admin
+          credentials:
+            username: admin
+            password: Admin@123
+
+  parameters:
+    failOnError: false
+    progressToStdout: true
+
+jobs:
+  - type: passiveScan-config
+    parameters:
+      maxAlertsPerRule: 20
+      scanOnlyInScope: true
+
+  - type: spider
+    parameters:
+      context: OficinaMecanicaBackend
+      user: Admin
+      maxDuration: 5
+      maxDepth: 5
+      acceptCookies: false
+
+  - type: passiveScan-wait
+    parameters:
+      maxDuration: 10
+
+  - type: activeScan
+    parameters:
+      context: OficinaMecanicaBackend
+      user: Admin
+      scanPolicyName: Default Policy
+      maxScanDurationInMins: 20
+
+  - type: report
+    parameters:
+      template: traditional-html
+      reportDir: /zap/wrk
+      reportFile: zap-active-report
+      reportTitle: "ZAP Active Scan — OficinaMecanicaBackend"
+      reportDescription: "Relatório de varredura DAST - Tech Challenge FIAP 15SOAT"
+
+  - type: report
+    parameters:
+      template: traditional-json
+      reportDir: /zap/wrk
+      reportFile: zap-active-report

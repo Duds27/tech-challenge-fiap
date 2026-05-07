@@ -16,6 +16,7 @@ API REST para gestão de uma oficina mecânica de médio porte, desenvolvida com
 - [Fluxo de Status da OS](#fluxo-de-status-da-os)
 - [Autenticação](#autenticação)
 - [Testes](#testes)
+- [Análise de Segurança](#análise-de-segurança)
 - [Estrutura do Projeto](#estrutura-do-projeto)
 
 ---
@@ -298,6 +299,98 @@ dotnet test --collect:"XPlat Code Coverage"
 ```
 
 O relatório é gerado em `tests/OficinaMecanicaBackend.Tests/TestResults/*/coverage.cobertura.xml`.
+
+---
+
+## Análise de Segurança
+
+O projeto inclui configuração para dois tipos de varredura de segurança: **SAST** (análise estática do código) via SonarQube e **DAST** (análise dinâmica da API em execução) via OWASP ZAP.
+
+Os relatórios gerados estão em [`security/reports/`](security/reports/).
+
+### Pré-requisitos adicionais
+
+- Docker Desktop em execução
+- `dotnet-sonarscanner` (instalado automaticamente pelo script)
+- Token SonarQube (gerado após subir o container)
+
+---
+
+### SonarQube — Análise Estática (SAST)
+
+Analisa o código-fonte em busca de vulnerabilidades, security hotspots e code smells.
+
+**1. Subir o SonarQube:**
+
+```bash
+docker compose -f security/docker-compose.security.yml up sonarqube
+```
+
+Aguarde o container ficar saudável (~2 min) e acesse `http://localhost:9000`.  
+Login padrão: `admin` / `admin` (será solicitada troca de senha no primeiro acesso).
+
+**2. Gerar um token de acesso:**
+
+`http://localhost:9000` → My Account → Security → Generate Token
+
+**3. Executar o scan:**
+
+```powershell
+.\security\run-sonar-scan.ps1 -SonarToken "sqp_seu_token_aqui"
+```
+
+O script compila o projeto, roda os testes com cobertura e envia os resultados automaticamente.  
+Ao final, o dashboard estará disponível em:  
+`http://localhost:9000/dashboard?id=oficina-mecanica-backend`
+
+> Relatório detalhado: [`security/reports/sonarqube-report.md`](security/reports/sonarqube-report.md)
+
+---
+
+### OWASP ZAP — Varredura Dinâmica (DAST)
+
+Testa a API em execução em busca de vulnerabilidades de runtime (força bruta, headers ausentes, endpoints expostos, etc.).
+
+**1. Garantir que a API está rodando:**
+
+```bash
+cd OficinaMecanicaBackend
+docker compose up
+```
+
+**2. Executar o scan ZAP:**
+
+```powershell
+.\security\run-zap-scan.ps1
+```
+
+Os relatórios HTML, JSON e XML são salvos em `security/reports/`:
+
+| Arquivo | Formato |
+|---|---|
+| `zap-baseline-report.html` | Legível no navegador |
+| `zap-baseline-report.json` | Análise programática |
+| `zap-baseline-report.xml`  | Integração CI/CD |
+
+Para um scan mais profundo (com spider autenticado e active scan completo):
+
+```powershell
+.\security\run-zap-scan.ps1 -ScanType Full
+```
+
+> Relatório detalhado: [`security/reports/zap-report.md`](security/reports/zap-report.md)
+
+---
+
+### Resumo das Vulnerabilidades Identificadas
+
+| Ferramenta | Severidade | Total | Principais Achados |
+|---|---|---|---|
+| SonarQube | Critical | 2 | Credenciais e chave JWT hardcoded em `appsettings.json` |
+| SonarQube | Hotspot High | 2 | Senha comparada sem hash; CORS permissivo |
+| SonarQube | Hotspot Medium | 3 | Senha MySQL no docker-compose; porta 3306 exposta; security headers ausentes |
+| ZAP | Alto | 1 | Sem rate limiting no endpoint de login |
+| ZAP | Médio | 4 | CSP ausente; anti-clickjacking; aprovação anônima sem validação; HSTS ausente |
 
 ---
 
