@@ -23,33 +23,33 @@ API REST para gestão de uma oficina mecânica de médio porte, desenvolvida com
 
 ## Dicionário de Linguagem Ubíqua
 
-| Termo | Definição |
-|---|---|
-| **Ordem de Serviço (OS)** | Entidade principal que agrega o cliente, o veículo, os serviços e as peças de um atendimento. |
-| **Cliente** | Pessoa física ou jurídica proprietária do veículo, identificada por CPF ou CNPJ. |
-| **Veículo** | Automóvel pertencente a um cliente, identificado pela placa (formato antigo ou Mercosul). |
-| **Serviço** | Mão de obra executada na OS (ex.: alinhamento, troca de óleo). Possui preço-base cadastrado. |
-| **Insumo / Peça** | Material físico utilizado no reparo. Possui controle de estoque mínimo e valor comercial. |
-| **Orçamento** | Somatório automático de serviços e peças da OS, enviado para aprovação do cliente. |
-| **Status da OS** | Estado do ciclo de vida: Recebida → Em Diagnóstico → Aguardando Aprovação → Em Execução → Finalizada → Entregue. |
-| **Tempo de Execução** | Métrica que monitora a duração do serviço para análise de eficiência. |
-| **CRUD Administrativo** | Operações de gestão dos cadastros-base (clientes, veículos, serviços, peças) protegidas por JWT. |
+| Termo                     | Definição                                                                                                        |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| **Ordem de Serviço (OS)** | Entidade principal que agrega o cliente, o veículo, os serviços e as peças de um atendimento.                    |
+| **Cliente**               | Pessoa física ou jurídica proprietária do veículo, identificada por CPF ou CNPJ.                                 |
+| **Veículo**               | Automóvel pertencente a um cliente, identificado pela placa (formato antigo ou Mercosul).                        |
+| **Serviço**               | Mão de obra executada na OS (ex.: alinhamento, troca de óleo). Possui preço-base cadastrado.                     |
+| **Insumo / Peça**         | Material físico utilizado no reparo. Possui controle de estoque mínimo e valor comercial.                        |
+| **Orçamento**             | Somatório automático de serviços e peças da OS, enviado para aprovação do cliente.                               |
+| **Status da OS**          | Estado do ciclo de vida: Recebida → Em Diagnóstico → Aguardando Aprovação → Em Execução → Finalizada → Entregue. |
+| **Tempo de Execução**     | Métrica que monitora a duração do serviço para análise de eficiência.                                            |
+| **CRUD Administrativo**   | Operações de gestão dos cadastros-base (clientes, veículos, serviços, peças) protegidas por JWT.                 |
 
 ---
 
 ## Stack Tecnológica
 
-| Camada | Tecnologia |
-|---|---|
-| Runtime | .NET 8.0 / ASP.NET Core |
-| ORM | Entity Framework Core 8 + Pomelo MySQL |
-| Banco de dados | MySQL 8.4 |
-| Autenticação | JWT Bearer (Microsoft.AspNetCore.Authentication.JwtBearer) |
-| Validação | FluentValidation 11.3 |
-| Logging | Serilog (console + arquivo rotativo) |
-| Documentação | Swagger / Swashbuckle 6.9 |
-| Testes | xUnit + WebApplicationFactory + SQLite in-memory |
-| Containers | Docker + Docker Compose |
+| Camada         | Tecnologia                                                 |
+| -------------- | ---------------------------------------------------------- |
+| Runtime        | .NET 8.0 / ASP.NET Core                                    |
+| ORM            | Entity Framework Core 8 + Pomelo MySQL                     |
+| Banco de dados | MySQL 8.4                                                  |
+| Autenticação   | JWT Bearer (Microsoft.AspNetCore.Authentication.JwtBearer) |
+| Validação      | FluentValidation 11.3                                      |
+| Logging        | Serilog (console + arquivo rotativo)                       |
+| Documentação   | Swagger / Swashbuckle 6.9                                  |
+| Testes         | xUnit + WebApplicationFactory + SQLite in-memory           |
+| Containers     | Docker + Docker Compose                                    |
 
 ---
 
@@ -126,12 +126,12 @@ As migrations são aplicadas automaticamente na inicialização.
 
 Sobrescreva qualquer configuração via variáveis de ambiente usando `__` como separador de seção:
 
-| Variável | Exemplo |
-|---|---|
+| Variável                               | Exemplo                                                          |
+| -------------------------------------- | ---------------------------------------------------------------- |
 | `ConnectionStrings__DefaultConnection` | `server=db;database=OficinaMecanica;user=root;password=SuaSenha` |
-| `Jwt__Key` | `ChaveSecretaForteComMaisDe32Caracteres!` |
-| `Jwt__AdminUsername` | `admin` |
-| `Jwt__AdminPassword` | `SenhaForte@2026` |
+| `Jwt__Key`                             | `ChaveSecretaForteComMaisDe32Caracteres!`                        |
+| `Jwt__AdminUsername`                   | `admin`                                                          |
+| `Jwt__AdminPassword`                   | `SenhaForte@2026`                                                |
 
 ---
 
@@ -139,11 +139,12 @@ Sobrescreva qualquer configuração via variáveis de ambiente usando `__` como 
 
 ### Autenticação
 
-| Método | Rota | Auth | Descrição |
-|---|---|---|---|
-| POST | `/api/auth/login` | Não | Gera token JWT |
+| Método | Rota              | Auth | Descrição      |
+| ------ | ----------------- | ---- | -------------- |
+| POST   | `/api/auth/login` | Não  | Gera token JWT |
 
 **Payload de login:**
+
 ```json
 { "username": "admin", "password": "Admin@123" }
 ```
@@ -152,66 +153,66 @@ Sobrescreva qualquer configuração via variáveis de ambiente usando `__` como 
 
 ### Clientes
 
-| Método | Rota | Auth | Descrição |
-|---|---|---|---|
-| GET | `/api/clientes` | Sim | Lista todos os clientes |
-| GET | `/api/clientes/{id}` | Sim | Busca cliente por ID |
-| POST | `/api/clientes` | Sim | Cria cliente (CPF ou CNPJ validado) |
-| PUT | `/api/clientes/{id}` | Sim | Atualiza dados do cliente |
-| DELETE | `/api/clientes/{id}` | Sim | Remove cliente (409 se possuir OS) |
+| Método | Rota                 | Auth | Descrição                           |
+| ------ | -------------------- | ---- | ----------------------------------- |
+| GET    | `/api/clientes`      | Sim  | Lista todos os clientes             |
+| GET    | `/api/clientes/{id}` | Sim  | Busca cliente por ID                |
+| POST   | `/api/clientes`      | Sim  | Cria cliente (CPF ou CNPJ validado) |
+| PUT    | `/api/clientes/{id}` | Sim  | Atualiza dados do cliente           |
+| DELETE | `/api/clientes/{id}` | Sim  | Remove cliente (409 se possuir OS)  |
 
 ---
 
 ### Veículos
 
-| Método | Rota | Auth | Descrição |
-|---|---|---|---|
-| GET | `/api/veiculos` | Sim | Lista todos os veículos |
-| GET | `/api/veiculos/{id}` | Sim | Busca veículo por ID |
-| GET | `/api/veiculos/cliente/{clienteId}` | Sim | Veículos de um cliente |
-| POST | `/api/veiculos` | Sim | Cria veículo (placa validada) |
-| PUT | `/api/veiculos/{id}` | Sim | Atualiza dados do veículo |
-| DELETE | `/api/veiculos/{id}` | Sim | Remove veículo |
+| Método | Rota                                | Auth | Descrição                     |
+| ------ | ----------------------------------- | ---- | ----------------------------- |
+| GET    | `/api/veiculos`                     | Sim  | Lista todos os veículos       |
+| GET    | `/api/veiculos/{id}`                | Sim  | Busca veículo por ID          |
+| GET    | `/api/veiculos/cliente/{clienteId}` | Sim  | Veículos de um cliente        |
+| POST   | `/api/veiculos`                     | Sim  | Cria veículo (placa validada) |
+| PUT    | `/api/veiculos/{id}`                | Sim  | Atualiza dados do veículo     |
+| DELETE | `/api/veiculos/{id}`                | Sim  | Remove veículo                |
 
 ---
 
 ### Peças
 
-| Método | Rota | Auth | Descrição |
-|---|---|---|---|
-| GET | `/api/pecas` | Sim | Lista todas as peças |
-| GET | `/api/pecas/{id}` | Sim | Busca peça por ID |
-| GET | `/api/pecas/estoque-baixo` | Sim | Peças abaixo do estoque mínimo |
-| POST | `/api/pecas` | Sim | Cadastra peça |
-| PUT | `/api/pecas/{id}` | Sim | Atualiza peça |
-| DELETE | `/api/pecas/{id}` | Sim | Remove peça |
+| Método | Rota                       | Auth | Descrição                      |
+| ------ | -------------------------- | ---- | ------------------------------ |
+| GET    | `/api/pecas`               | Sim  | Lista todas as peças           |
+| GET    | `/api/pecas/{id}`          | Sim  | Busca peça por ID              |
+| GET    | `/api/pecas/estoque-baixo` | Sim  | Peças abaixo do estoque mínimo |
+| POST   | `/api/pecas`               | Sim  | Cadastra peça                  |
+| PUT    | `/api/pecas/{id}`          | Sim  | Atualiza peça                  |
+| DELETE | `/api/pecas/{id}`          | Sim  | Remove peça                    |
 
 ---
 
 ### Serviços
 
-| Método | Rota | Auth | Descrição |
-|---|---|---|---|
-| GET | `/api/servicos` | Sim | Lista todos os serviços |
-| GET | `/api/servicos/{id}` | Sim | Busca serviço por ID |
-| POST | `/api/servicos` | Sim | Cadastra serviço |
-| PUT | `/api/servicos/{id}` | Sim | Atualiza serviço |
-| DELETE | `/api/servicos/{id}` | Sim | Remove serviço |
+| Método | Rota                 | Auth | Descrição               |
+| ------ | -------------------- | ---- | ----------------------- |
+| GET    | `/api/servicos`      | Sim  | Lista todos os serviços |
+| GET    | `/api/servicos/{id}` | Sim  | Busca serviço por ID    |
+| POST   | `/api/servicos`      | Sim  | Cadastra serviço        |
+| PUT    | `/api/servicos/{id}` | Sim  | Atualiza serviço        |
+| DELETE | `/api/servicos/{id}` | Sim  | Remove serviço          |
 
 ---
 
 ### Ordens de Serviço
 
-| Método | Rota | Auth | Descrição |
-|---|---|---|---|
-| GET | `/api/ordens-servico` | Sim | Lista todas as OS |
-| GET | `/api/ordens-servico/{id}` | Sim | Busca OS por ID |
-| POST | `/api/ordens-servico` | Sim | Cria OS (NumeroOS gerado automaticamente) |
-| PUT | `/api/ordens-servico/{id}/status` | Sim | Avança status da OS |
-| PUT | `/api/ordens-servico/{id}/aprovar-orcamento` | **Não** | Cliente aprova/recusa orçamento |
-| GET | `/api/ordens-servico/{id}/status` | **Não** | Status público da OS para o cliente |
-| POST | `/api/ordens-servico/{id}/itens` | Sim | Adiciona serviço ou peça à OS |
-| DELETE | `/api/ordens-servico/{id}/itens/{itemId}` | Sim | Remove item da OS |
+| Método | Rota                                         | Auth    | Descrição                                 |
+| ------ | -------------------------------------------- | ------- | ----------------------------------------- |
+| GET    | `/api/ordens-servico`                        | Sim     | Lista todas as OS                         |
+| GET    | `/api/ordens-servico/{id}`                   | Sim     | Busca OS por ID                           |
+| POST   | `/api/ordens-servico`                        | Sim     | Cria OS (NumeroOS gerado automaticamente) |
+| PUT    | `/api/ordens-servico/{id}/status`            | Sim     | Avança status da OS                       |
+| PUT    | `/api/ordens-servico/{id}/aprovar-orcamento` | **Não** | Cliente aprova/recusa orçamento           |
+| GET    | `/api/ordens-servico/{id}/status`            | **Não** | Status público da OS para o cliente       |
+| POST   | `/api/ordens-servico/{id}/itens`             | Sim     | Adiciona serviço ou peça à OS             |
+| DELETE | `/api/ordens-servico/{id}/itens/{itemId}`    | Sim     | Remove item da OS                         |
 
 > Os endpoints de aprovação de orçamento e consulta de status são públicos (sem JWT) para que o cliente possa acompanhar e aprovar remotamente.
 
@@ -258,18 +259,18 @@ O token expira em **60 minutos** por padrão.
 
 ## Validações de Negócio
 
-| Regra | Comportamento |
-|---|---|
-| CPF validado com dígitos verificadores | 400 se inválido |
-| CNPJ alfanumérico (novo formato vigente desde jan/2026) | 400 se inválido |
-| Placa no formato antigo (`ABC1234`) ou Mercosul (`ABC1D23`) | 400 se inválida |
-| CPF/CNPJ duplicado | 409 Conflict |
-| Placa duplicada | 409 Conflict |
-| Excluir cliente com OS | 409 Conflict |
-| Adicionar peça sem estoque suficiente | 400 Bad Request |
-| Estoque de peça abaixo do mínimo | LogWarning emitido |
-| Transição de status inválida | 400 Bad Request |
-| Aprovar orçamento fora do status correto | 400 Bad Request |
+| Regra                                                       | Comportamento      |
+| ----------------------------------------------------------- | ------------------ |
+| CPF validado com dígitos verificadores                      | 400 se inválido    |
+| CNPJ alfanumérico (novo formato vigente desde jan/2026)     | 400 se inválido    |
+| Placa no formato antigo (`ABC1234`) ou Mercosul (`ABC1D23`) | 400 se inválida    |
+| CPF/CNPJ duplicado                                          | 409 Conflict       |
+| Placa duplicada                                             | 409 Conflict       |
+| Excluir cliente com OS                                      | 409 Conflict       |
+| Adicionar peça sem estoque suficiente                       | 400 Bad Request    |
+| Estoque de peça abaixo do mínimo                            | LogWarning emitido |
+| Transição de status inválida                                | 400 Bad Request    |
+| Aprovar orçamento fora do status correto                    | 400 Bad Request    |
 
 ---
 
@@ -284,11 +285,11 @@ dotnet test
 
 ### Estrutura
 
-| Categoria | Localização | Descrição |
-|---|---|---|
-| Unitários — Validators | `tests/.../Validators/` | CpfCnpjValidatorTests, PlacaValidatorTests |
-| Unitários — Services | `tests/.../Services/` | OrdemServicoServiceTests, PecaServiceTests |
-| Integração | `tests/.../Integration/` | ClientesControllerTests, OrdensServicoControllerTests |
+| Categoria              | Localização              | Descrição                                             |
+| ---------------------- | ------------------------ | ----------------------------------------------------- |
+| Unitários — Validators | `tests/.../Validators/`  | CpfCnpjValidatorTests, PlacaValidatorTests            |
+| Unitários — Services   | `tests/.../Services/`    | OrdemServicoServiceTests, PecaServiceTests            |
+| Integração             | `tests/.../Integration/` | ClientesControllerTests, OrdensServicoControllerTests |
 
 Os testes de integração usam `WebApplicationFactory<Program>` com SQLite in-memory, substituindo o MySQL. O JWT também é reconfigurado com uma chave de teste para os testes de integração.
 
@@ -336,7 +337,7 @@ Login padrão: `admin` / `admin` (será solicitada troca de senha no primeiro ac
 **3. Executar o scan:**
 
 ```powershell
-.\security\run-sonar-scan.ps1 -SonarToken "sqp_seu_token_aqui"
+powershell -ExecutionPolicy Bypass -File .\security\run-sonar-scan.ps1 -SonarToken "sqp_seu_token_aqui"
 ```
 
 O script compila o projeto, roda os testes com cobertura e envia os resultados automaticamente.  
@@ -361,21 +362,21 @@ docker compose up
 **2. Executar o scan ZAP:**
 
 ```powershell
-.\security\run-zap-scan.ps1
+powershell -ExecutionPolicy Bypass -File .\security\run-zap-scan.ps1
 ```
 
 Os relatórios HTML, JSON e XML são salvos em `security/reports/`:
 
-| Arquivo | Formato |
-|---|---|
+| Arquivo                    | Formato              |
+| -------------------------- | -------------------- |
 | `zap-baseline-report.html` | Legível no navegador |
 | `zap-baseline-report.json` | Análise programática |
-| `zap-baseline-report.xml`  | Integração CI/CD |
+| `zap-baseline-report.xml`  | Integração CI/CD     |
 
 Para um scan mais profundo (com spider autenticado e active scan completo):
 
 ```powershell
-.\security\run-zap-scan.ps1 -ScanType Full
+powershell -ExecutionPolicy Bypass -File .\security\run-zap-scan.ps1 -ScanType Full
 ```
 
 > Relatório detalhado: [`security/reports/zap-report.md`](security/reports/zap-report.md)
@@ -384,13 +385,13 @@ Para um scan mais profundo (com spider autenticado e active scan completo):
 
 ### Resumo das Vulnerabilidades Identificadas
 
-| Ferramenta | Severidade | Total | Principais Achados |
-|---|---|---|---|
-| SonarQube | Critical | 2 | Credenciais e chave JWT hardcoded em `appsettings.json` |
-| SonarQube | Hotspot High | 2 | Senha comparada sem hash; CORS permissivo |
-| SonarQube | Hotspot Medium | 3 | Senha MySQL no docker-compose; porta 3306 exposta; security headers ausentes |
-| ZAP | Alto | 1 | Sem rate limiting no endpoint de login |
-| ZAP | Médio | 4 | CSP ausente; anti-clickjacking; aprovação anônima sem validação; HSTS ausente |
+| Ferramenta | Severidade     | Total | Principais Achados                                                            |
+| ---------- | -------------- | ----- | ----------------------------------------------------------------------------- |
+| SonarQube  | Critical       | 2     | Credenciais e chave JWT hardcoded em `appsettings.json`                       |
+| SonarQube  | Hotspot High   | 2     | Senha comparada sem hash; CORS permissivo                                     |
+| SonarQube  | Hotspot Medium | 3     | Senha MySQL no docker-compose; porta 3306 exposta; security headers ausentes  |
+| ZAP        | Alto           | 1     | Sem rate limiting no endpoint de login                                        |
+| ZAP        | Médio          | 4     | CSP ausente; anti-clickjacking; aprovação anônima sem validação; HSTS ausente |
 
 ---
 
@@ -429,11 +430,11 @@ OficinaMecanicaBackend/
 
 O schema é gerenciado via EF Core Migrations e aplicado automaticamente na inicialização.
 
-| Tabela | Descrição |
-|---|---|
-| `Clientes` | Cadastro de clientes (CPF/CNPJ único) |
-| `Veiculos` | Veículos vinculados a clientes (placa única) |
-| `Pecas` | Catálogo de peças com controle de estoque |
-| `Servicos` | Catálogo de serviços com preço-base |
-| `OrdensServico` | Ordens de serviço (NumeroOS único, formato `OS-YYYY-000001`) |
-| `ItensOrdenServico` | Itens de OS (serviços e peças com preço snapshot) |
+| Tabela              | Descrição                                                    |
+| ------------------- | ------------------------------------------------------------ |
+| `Clientes`          | Cadastro de clientes (CPF/CNPJ único)                        |
+| `Veiculos`          | Veículos vinculados a clientes (placa única)                 |
+| `Pecas`             | Catálogo de peças com controle de estoque                    |
+| `Servicos`          | Catálogo de serviços com preço-base                          |
+| `OrdensServico`     | Ordens de serviço (NumeroOS único, formato `OS-YYYY-000001`) |
+| `ItensOrdenServico` | Itens de OS (serviços e peças com preço snapshot)            |

@@ -24,7 +24,7 @@ $ErrorActionPreference = "Stop"
 $Root        = Split-Path -Parent $PSScriptRoot
 $BackendRoot = Join-Path $Root "OficinaMecanicaBackend"
 
-Write-Host "`n=== SonarQube Security Scan — OficinaMecanicaBackend ===" -ForegroundColor Cyan
+Write-Host "`n=== SonarQube Security Scan - OficinaMecanicaBackend ===" -ForegroundColor Cyan
 
 if (-not $SonarToken) {
     Write-Error "SONAR_TOKEN não definido. Gere um token em $SonarHost e passe via -SonarToken ou variável de ambiente SONAR_TOKEN."

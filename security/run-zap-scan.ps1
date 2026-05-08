@@ -21,7 +21,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "`n=== OWASP ZAP DAST Scan — OficinaMecanicaBackend ===" -ForegroundColor Cyan
+Write-Host "`n=== OWASP ZAP DAST Scan - OficinaMecanicaBackend ===" -ForegroundColor Cyan
 Write-Host "Target  : $TargetUrl" -ForegroundColor Yellow
 Write-Host "Tipo    : $ScanType" -ForegroundColor Yellow
 Write-Host "Reports : $ReportDir`n" -ForegroundColor Yellow
@@ -78,7 +78,7 @@ docker run --rm `
 
 $ExitCode = $LASTEXITCODE
 if ($ExitCode -gt 2) {
-    Write-Warning "ZAP retornou codigo $ExitCode (alertas encontrados — verifique o relatorio)."
+    Write-Warning "ZAP retornou codigo $ExitCode (alertas encontrados - verifique o relatorio)."
 }
 
 # ── Finaliza ─────────────────────────────────────────────────
