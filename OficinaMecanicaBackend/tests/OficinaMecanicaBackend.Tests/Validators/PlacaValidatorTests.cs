@@ -1,4 +1,4 @@
-using OficinaMecanicaBackend.Validators;
+using OficinaMecanica.Application.Validators;
 
 namespace OficinaMecanicaBackend.Tests.Validators;
 

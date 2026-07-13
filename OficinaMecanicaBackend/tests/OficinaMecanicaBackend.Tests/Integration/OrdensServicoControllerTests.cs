@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using OficinaMecanicaBackend.Models.Enums;
+using OficinaMecanica.Domain.Enums;
 using OficinaMecanicaBackend.Tests.Infrastructure;
 
 namespace OficinaMecanicaBackend.Tests.Integration;
@@ -183,6 +183,38 @@ public class OrdensServicoControllerTests : IClassFixture<CustomWebApplicationFa
     }
 
     [Fact]
+    public async Task Listagem_ExcluiFinalizadasEEntregues()
+    {
+        await AuthorizeAsync();
+        var (cId, vId, _, _) = await SeedBaseAsync();
+
+        // Cria OS e leva até Finalizada
+        var osResp = await _client.PostAsJsonAsync("/api/ordens-servico",
+            new { ClienteId = cId, VeiculoId = vId });
+        var os = await osResp.Content.ReadFromJsonAsync<IdResult>();
+
+        await _client.PutAsJsonAsync($"/api/ordens-servico/{os!.Id}/status",
+            new { NovoStatus = (int)StatusOrdemServico.EmDiagnostico });
+        await _client.PutAsJsonAsync($"/api/ordens-servico/{os.Id}/status",
+            new { NovoStatus = (int)StatusOrdemServico.AguardandoAprovacao });
+        await _client.PutAsJsonAsync($"/api/ordens-servico/{os.Id}/aprovar-orcamento",
+            new { Aprovado = true });
+        await _client.PutAsJsonAsync($"/api/ordens-servico/{os.Id}/status",
+            new { NovoStatus = (int)StatusOrdemServico.EmExecucao });
+        await _client.PutAsJsonAsync($"/api/ordens-servico/{os.Id}/status",
+            new { NovoStatus = (int)StatusOrdemServico.Finalizada });
+
+        // Listagem padrão não deve conter a OS finalizada
+        var lista = await _client.GetFromJsonAsync<List<OrdemServicoStatusResult>>("/api/ordens-servico");
+        Assert.DoesNotContain(lista!, o => o.Id == os.Id);
+
+        // Com incluirConcluidas=true ela reaparece
+        var listaCompleta = await _client.GetFromJsonAsync<List<OrdemServicoStatusResult>>(
+            "/api/ordens-servico?incluirConcluidas=true");
+        Assert.Contains(listaCompleta!, o => o.Id == os.Id);
+    }
+
+    [Fact]
     public async Task TempoMedioExecucao_Returns200ComPayload()
     {
         await AuthorizeAsync();
@@ -229,6 +261,7 @@ public class OrdensServicoControllerTests : IClassFixture<CustomWebApplicationFa
 
     // ── DTOs para deserialização ──
     private record IdResult(int Id);
+    private record OrdemServicoStatusResult(int Id, StatusOrdemServico Status);
     private record TempoMedioExecucaoResult(
         int OrdensConsideradas,
         double TempoMedioSegundos,
