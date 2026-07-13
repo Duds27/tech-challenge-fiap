@@ -5,13 +5,19 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "OficinaMecanicaBackend", "OficinaMecanicaBackend", "{E39AC962-D953-4114-BD55-9C4A8844D68F}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{9B403C5A-0301-4BFC-914F-0A98333FFFF1}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OficinaMecanicaBackend", "src\OficinaMecanicaBackend\OficinaMecanicaBackend.csproj", "{E3008B34-EE08-4539-AD0B-786C65027BED}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{53AAEA7B-97BC-42D6-ABFA-93D48F1FE511}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OficinaMecanicaBackend.Tests", "tests\OficinaMecanicaBackend.Tests\OficinaMecanicaBackend.Tests.csproj", "{B800AD12-7B12-4890-BB7C-1E568C265C31}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{56C6E902-ABFE-47BF-AD78-141723A45C3A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OficinaMecanica.Domain", "src\OficinaMecanica.Domain\OficinaMecanica.Domain.csproj", "{663FBCBE-F001-4898-9C88-17F1CDD79D3C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OficinaMecanica.Application", "src\OficinaMecanica.Application\OficinaMecanica.Application.csproj", "{E4102812-C868-4E7C-B0BF-E589EF728FA6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OficinaMecanica.Infrastructure", "src\OficinaMecanica.Infrastructure\OficinaMecanica.Infrastructure.csproj", "{256F207E-B2BA-43B4-861C-160464079651}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OficinaMecanica.API", "src\OficinaMecanica.API\OficinaMecanica.API.csproj", "{4D0540C9-60B1-4719-B25F-CA070D275B23}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -22,19 +28,33 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{E3008B34-EE08-4539-AD0B-786C65027BED}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E3008B34-EE08-4539-AD0B-786C65027BED}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E3008B34-EE08-4539-AD0B-786C65027BED}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E3008B34-EE08-4539-AD0B-786C65027BED}.Release|Any CPU.Build.0 = Release|Any CPU
 		{B800AD12-7B12-4890-BB7C-1E568C265C31}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{B800AD12-7B12-4890-BB7C-1E568C265C31}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B800AD12-7B12-4890-BB7C-1E568C265C31}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B800AD12-7B12-4890-BB7C-1E568C265C31}.Release|Any CPU.Build.0 = Release|Any CPU
+		{663FBCBE-F001-4898-9C88-17F1CDD79D3C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{663FBCBE-F001-4898-9C88-17F1CDD79D3C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{663FBCBE-F001-4898-9C88-17F1CDD79D3C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{663FBCBE-F001-4898-9C88-17F1CDD79D3C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E4102812-C868-4E7C-B0BF-E589EF728FA6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E4102812-C868-4E7C-B0BF-E589EF728FA6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E4102812-C868-4E7C-B0BF-E589EF728FA6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E4102812-C868-4E7C-B0BF-E589EF728FA6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{256F207E-B2BA-43B4-861C-160464079651}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{256F207E-B2BA-43B4-861C-160464079651}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{256F207E-B2BA-43B4-861C-160464079651}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{256F207E-B2BA-43B4-861C-160464079651}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4D0540C9-60B1-4719-B25F-CA070D275B23}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4D0540C9-60B1-4719-B25F-CA070D275B23}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4D0540C9-60B1-4719-B25F-CA070D275B23}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4D0540C9-60B1-4719-B25F-CA070D275B23}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{9B403C5A-0301-4BFC-914F-0A98333FFFF1} = {E39AC962-D953-4114-BD55-9C4A8844D68F}
-		{E3008B34-EE08-4539-AD0B-786C65027BED} = {9B403C5A-0301-4BFC-914F-0A98333FFFF1}
 		{53AAEA7B-97BC-42D6-ABFA-93D48F1FE511} = {E39AC962-D953-4114-BD55-9C4A8844D68F}
 		{B800AD12-7B12-4890-BB7C-1E568C265C31} = {53AAEA7B-97BC-42D6-ABFA-93D48F1FE511}
+		{663FBCBE-F001-4898-9C88-17F1CDD79D3C} = {56C6E902-ABFE-47BF-AD78-141723A45C3A}
+		{E4102812-C868-4E7C-B0BF-E589EF728FA6} = {56C6E902-ABFE-47BF-AD78-141723A45C3A}
+		{256F207E-B2BA-43B4-861C-160464079651} = {56C6E902-ABFE-47BF-AD78-141723A45C3A}
+		{4D0540C9-60B1-4719-B25F-CA070D275B23} = {56C6E902-ABFE-47BF-AD78-141723A45C3A}
 	EndGlobalSection
 EndGlobal

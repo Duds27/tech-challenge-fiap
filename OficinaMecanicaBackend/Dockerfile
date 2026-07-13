@@ -2,12 +2,17 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /app
 
+# Copia os arquivos de projeto primeiro para aproveitar o cache de restore
 COPY OficinaMecanicaBackend.sln ./
-COPY src/OficinaMecanicaBackend/OficinaMecanicaBackend.csproj src/OficinaMecanicaBackend/
-RUN dotnet restore src/OficinaMecanicaBackend/OficinaMecanicaBackend.csproj
+COPY src/OficinaMecanica.Domain/OficinaMecanica.Domain.csproj src/OficinaMecanica.Domain/
+COPY src/OficinaMecanica.Application/OficinaMecanica.Application.csproj src/OficinaMecanica.Application/
+COPY src/OficinaMecanica.Infrastructure/OficinaMecanica.Infrastructure.csproj src/OficinaMecanica.Infrastructure/
+COPY src/OficinaMecanica.API/OficinaMecanica.API.csproj src/OficinaMecanica.API/
+RUN dotnet restore src/OficinaMecanica.API/OficinaMecanica.API.csproj
 
-COPY src/OficinaMecanicaBackend/ src/OficinaMecanicaBackend/
-RUN dotnet publish src/OficinaMecanicaBackend/OficinaMecanicaBackend.csproj -c Release -o /publish
+# Copia o restante do código e publica
+COPY src/ src/
+RUN dotnet publish src/OficinaMecanica.API/OficinaMecanica.API.csproj -c Release -o /publish
 
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
@@ -21,4 +26,4 @@ RUN mkdir -p /app/logs && chown -R app:app /app
 USER app
 
 EXPOSE 8080
-ENTRYPOINT ["dotnet", "OficinaMecanicaBackend.dll"]
+ENTRYPOINT ["dotnet", "OficinaMecanica.API.dll"]
