@@ -182,8 +182,29 @@ public class OrdensServicoControllerTests : IClassFixture<CustomWebApplicationFa
         Assert.Equal(estoqueAposAdicao + 3, pecaFinal!.QuantidadeEstoque);
     }
 
+    [Fact]
+    public async Task TempoMedioExecucao_Returns200ComPayload()
+    {
+        await AuthorizeAsync();
+
+        var response = await _client.GetAsync("/api/ordens-servico/tempo-medio-execucao");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var payload = await response.Content.ReadFromJsonAsync<TempoMedioExecucaoResult>();
+        Assert.NotNull(payload);
+        Assert.True(payload!.OrdensConsideradas >= 0);
+        Assert.False(string.IsNullOrEmpty(payload.TempoMedioFormatado));
+    }
+
     // ── DTOs para deserialização ──
     private record IdResult(int Id);
+    private record TempoMedioExecucaoResult(
+        int OrdensConsideradas,
+        double TempoMedioSegundos,
+        double TempoMedioMinutos,
+        double TempoMedioHoras,
+        string TempoMedioFormatado);
     private record ClienteResult(int Id, string Nome);
     private record PecaResult(int Id, int QuantidadeEstoque);
     private record ItemResult(int Id);

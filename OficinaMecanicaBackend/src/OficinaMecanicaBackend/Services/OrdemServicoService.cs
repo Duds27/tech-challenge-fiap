@@ -52,6 +52,30 @@ public class OrdemServicoService
         ));
     }
 
+    public async Task<ServiceResult<TempoMedioExecucaoDto>> GetTempoMedioExecucaoAsync()
+    {
+        var periodos = await _db.OrdensServico
+            .AsNoTracking()
+            .Where(o => o.DataFinalizacao != null)
+            .Select(o => new { o.DataCriacao, DataFinalizacao = o.DataFinalizacao!.Value })
+            .ToListAsync();
+
+        if (periodos.Count == 0)
+            return ServiceResult<TempoMedioExecucaoDto>.Ok(
+                new TempoMedioExecucaoDto(0, 0, 0, 0, "00:00:00"));
+
+        var mediaSegundos = periodos.Average(p => (p.DataFinalizacao - p.DataCriacao).TotalSeconds);
+        var media = TimeSpan.FromSeconds(mediaSegundos);
+
+        return ServiceResult<TempoMedioExecucaoDto>.Ok(new TempoMedioExecucaoDto(
+            periodos.Count,
+            Math.Round(mediaSegundos, 2),
+            Math.Round(media.TotalMinutes, 2),
+            Math.Round(media.TotalHours, 2),
+            $"{(int)media.TotalHours:D2}:{media.Minutes:D2}:{media.Seconds:D2}"
+        ));
+    }
+
     public async Task<ServiceResult<OrdemServicoDto>> CreateAsync(CreateOrdemServicoDto dto)
     {
         var clienteExiste = await _db.Clientes.AnyAsync(c => c.Id == dto.ClienteId);

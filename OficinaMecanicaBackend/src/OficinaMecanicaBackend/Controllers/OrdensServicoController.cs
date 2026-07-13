@@ -24,6 +24,18 @@ public class OrdensServicoController : ControllerBase
         return Ok(result.Data);
     }
 
+    /// <summary>
+    /// Retorna o tempo médio de execução das ordens de serviço, calculado do
+    /// momento de criação até a finalização. Considera apenas ordens finalizadas.
+    /// </summary>
+    [HttpGet("tempo-medio-execucao")]
+    [ProducesResponseType(typeof(TempoMedioExecucaoDto), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetTempoMedioExecucao()
+    {
+        var result = await _service.GetTempoMedioExecucaoAsync();
+        return Ok(result.Data);
+    }
+
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
     {
