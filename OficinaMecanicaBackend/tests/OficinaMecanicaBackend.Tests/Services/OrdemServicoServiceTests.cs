@@ -68,6 +68,24 @@ public class OrdemServicoServiceTests : IDisposable
         return os;
     }
 
+    private async Task<OrdemServico> SeedOrdemFinalizadaAsync(int clienteId, int veiculoId,
+        DateTime dataCriacao, DateTime dataFinalizacao)
+    {
+        var os = new OrdemServico
+        {
+            NumeroOS = $"OS-{DateTime.UtcNow.Year}-{Random.Shared.Next(100000, 999999):D6}",
+            ClienteId = clienteId,
+            VeiculoId = veiculoId,
+            Status = StatusOrdemServico.Finalizada,
+            ValorTotal = 0,
+            DataCriacao = dataCriacao,
+            DataFinalizacao = dataFinalizacao
+        };
+        _db.OrdensServico.Add(os);
+        await _db.SaveChangesAsync();
+        return os;
+    }
+
     private async Task<Servico> SeedServicoAsync(decimal preco = 100m)
     {
         var s = new Servico { Nome = "Troca de óleo", PrecoBase = preco, Ativo = true, DataCriacao = DateTime.UtcNow };
@@ -207,6 +225,61 @@ public class OrdemServicoServiceTests : IDisposable
 
         Assert.True(result.Success);
         Assert.Equal(200m, result.Data!.ValorTotal);
+    }
+
+    // ────── GetTempoMedioExecucaoAsync ──────
+
+    [Fact]
+    public async Task GetTempoMedioExecucaoAsync_SemOrdensFinalizadas_RetornaZero()
+    {
+        var (c, v) = await SeedClienteVeiculoAsync();
+        // OS ainda não finalizada (DataFinalizacao == null)
+        await SeedOrdemAsync(c.Id, v.Id, StatusOrdemServico.EmExecucao);
+
+        var result = await _service.GetTempoMedioExecucaoAsync();
+
+        Assert.True(result.Success);
+        Assert.Equal(0, result.Data!.OrdensConsideradas);
+        Assert.Equal(0, result.Data.TempoMedioSegundos);
+        Assert.Equal("00:00:00", result.Data.TempoMedioFormatado);
+    }
+
+    [Fact]
+    public async Task GetTempoMedioExecucaoAsync_CalculaMediaDasOrdensFinalizadas()
+    {
+        var (c, v) = await SeedClienteVeiculoAsync();
+        var baseData = DateTime.UtcNow;
+
+        // OS 1: 2 horas de execução
+        await SeedOrdemFinalizadaAsync(c.Id, v.Id, baseData, baseData.AddHours(2));
+        // OS 2: 4 horas de execução
+        await SeedOrdemFinalizadaAsync(c.Id, v.Id, baseData, baseData.AddHours(4));
+
+        var result = await _service.GetTempoMedioExecucaoAsync();
+
+        Assert.True(result.Success);
+        Assert.Equal(2, result.Data!.OrdensConsideradas);
+        // média = (2h + 4h) / 2 = 3h = 10800s
+        Assert.Equal(10800, result.Data.TempoMedioSegundos);
+        Assert.Equal(3, result.Data.TempoMedioHoras);
+        Assert.Equal("03:00:00", result.Data.TempoMedioFormatado);
+    }
+
+    [Fact]
+    public async Task GetTempoMedioExecucaoAsync_IgnoraOrdensNaoFinalizadas()
+    {
+        var (c, v) = await SeedClienteVeiculoAsync();
+        var baseData = DateTime.UtcNow;
+
+        // Uma finalizada (1h) e uma em aberto — só a finalizada conta
+        await SeedOrdemFinalizadaAsync(c.Id, v.Id, baseData, baseData.AddHours(1));
+        await SeedOrdemAsync(c.Id, v.Id, StatusOrdemServico.EmExecucao);
+
+        var result = await _service.GetTempoMedioExecucaoAsync();
+
+        Assert.True(result.Success);
+        Assert.Equal(1, result.Data!.OrdensConsideradas);
+        Assert.Equal(3600, result.Data.TempoMedioSegundos);
     }
 
     // ────── DeleteItemAsync ──────

@@ -77,6 +77,12 @@ try
     {
         c.SwaggerDoc("v1", new OpenApiInfo { Title = "OficinaMecanicaBackend API", Version = "v1" });
 
+        // Inclui os comentários XML (summaries) na documentação do Swagger
+        var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+        var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+        if (File.Exists(xmlPath))
+            c.IncludeXmlComments(xmlPath);
+
         c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
         {
             Description = "Cole apenas o token JWT (sem o prefixo 'Bearer ').",

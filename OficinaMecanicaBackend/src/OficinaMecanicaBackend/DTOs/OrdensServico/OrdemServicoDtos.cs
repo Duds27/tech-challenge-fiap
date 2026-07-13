@@ -59,3 +59,16 @@ public record StatusPublicoDto(
     string StatusDescricao,
     DateTime? DataPrevisaoTermino
 );
+
+/// <summary>
+/// Tempo médio de execução das ordens de serviço, medido do momento de
+/// criação (DataCriacao) até a finalização (DataFinalizacao). Apenas ordens
+/// já finalizadas são consideradas no cálculo.
+/// </summary>
+public record TempoMedioExecucaoDto(
+    int OrdensConsideradas,
+    double TempoMedioSegundos,
+    double TempoMedioMinutos,
+    double TempoMedioHoras,
+    string TempoMedioFormatado
+);
