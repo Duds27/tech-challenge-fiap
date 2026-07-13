@@ -107,9 +107,32 @@ try
     {
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         if (db.Database.IsRelational() && db.Database.ProviderName?.Contains("Sqlite") != true)
-            db.Database.Migrate();
+        {
+            // O banco pode ainda estar subindo (ex.: MySQL em container na primeira
+            // inicialização). Retenta a migração até o servidor aceitar conexões TCP,
+            // em vez de derrubar a aplicação no primeiro erro transitório.
+            const int maxAttempts = 12;
+            const int delaySeconds = 5;
+            for (var attempt = 1; ; attempt++)
+            {
+                try
+                {
+                    db.Database.Migrate();
+                    break;
+                }
+                catch (Exception ex) when (attempt < maxAttempts)
+                {
+                    Log.Warning(ex,
+                        "Banco de dados indisponível (tentativa {Attempt}/{Max}). Nova tentativa em {Delay}s...",
+                        attempt, maxAttempts, delaySeconds);
+                    Thread.Sleep(TimeSpan.FromSeconds(delaySeconds));
+                }
+            }
+        }
         else
+        {
             db.Database.EnsureCreated();
+        }
     }
 
     if (app.Environment.IsDevelopment())

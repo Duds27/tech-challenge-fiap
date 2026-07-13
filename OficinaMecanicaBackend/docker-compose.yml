@@ -23,10 +23,14 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pYour_password123"]
+      # Força ping via TCP (não socket). Durante a inicialização, o MySQL sobe um
+      # servidor temporário só-socket; ping por TCP só passa quando o servidor real
+      # aceita conexões — evitando marcar o container como saudável cedo demais.
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-P", "3306", "--protocol=tcp", "-uroot", "-pYour_password123"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 30s
 
 volumes:
   mysql_data:
