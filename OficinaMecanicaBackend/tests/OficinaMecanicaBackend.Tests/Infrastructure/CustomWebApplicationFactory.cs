@@ -3,16 +3,15 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
-using OficinaMecanicaBackend.Data;
+using Testcontainers.MySql;
+using Xunit;
 
 namespace OficinaMecanicaBackend.Tests.Infrastructure;
 
-public class CustomWebApplicationFactory : WebApplicationFactory<Program>
+public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     private const string TestJwtKey      = "TestSecretKeyMustBe32CharsMinimum!!";
     private const string TestJwtIssuer   = "TestIssuer";
@@ -20,21 +19,34 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     private const string AdminUsername   = "admin";
     private const string AdminPassword   = "admin123";
 
-    private readonly SqliteConnection _connection;
+    // Sobe um MySQL real, na mesma versão usada em produção (docker-compose / Dockerfile),
+    // para que os testes de integração exercitem o provedor Pomelo/MySQL e as migrations
+    // exatamente como no ambiente real — em vez de um SQLite in-memory que diverge do alvo.
+    private readonly MySqlContainer _mySql = new MySqlBuilder()
+        .WithImage("mysql:8.4")
+        .WithDatabase("oficina_test")
+        .WithUsername("oficina")
+        .WithPassword("oficina_pwd")
+        .Build();
 
-    public CustomWebApplicationFactory()
+    public Task InitializeAsync() => _mySql.StartAsync();
+
+    async Task IAsyncLifetime.DisposeAsync()
     {
-        _connection = new SqliteConnection("DataSource=:memory:");
-        _connection.Open();
+        await _mySql.DisposeAsync();
+        await base.DisposeAsync();
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        // Inject test configuration (admin credentials, JWT settings, fake DB string)
+        // Injeta a connection string do container e as configurações de teste.
+        // Como o provedor continua sendo MySQL (idêntico ao de produção), não é
+        // preciso substituir o DbContext: o Program.cs registra o provedor correto
+        // e aplica as migrations no startup (db.Database.Migrate()).
         builder.ConfigureAppConfiguration((_, config) =>
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["ConnectionStrings:DefaultConnection"] = "server=test;database=test;user=test;password=test",
+                ["ConnectionStrings:DefaultConnection"] = _mySql.GetConnectionString(),
                 ["Jwt:Key"]              = TestJwtKey,
                 ["Jwt:Issuer"]          = TestJwtIssuer,
                 ["Jwt:Audience"]        = TestJwtAudience,
@@ -45,13 +57,6 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
         builder.ConfigureServices(services =>
         {
-            // Replace MySQL DbContext with SQLite in-memory
-            var descriptor = services.SingleOrDefault(
-                d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
-            if (descriptor != null) services.Remove(descriptor);
-
-            services.AddDbContext<AppDbContext>(o => o.UseSqlite(_connection));
-
             // Override JWT validation parameters so they match the test signing key.
             // Program.cs reads Jwt:Key at build-time (before ConfigureAppConfiguration
             // applies), so the middleware may have been configured with the appsettings
@@ -73,12 +78,6 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
                     };
                 });
         });
-    }
-
-    protected override void Dispose(bool disposing)
-    {
-        base.Dispose(disposing);
-        if (disposing) _connection.Dispose();
     }
 
     public static async Task<string> GetAuthTokenAsync(HttpClient client)
