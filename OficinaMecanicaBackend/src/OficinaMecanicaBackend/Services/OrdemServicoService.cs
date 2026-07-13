@@ -56,15 +56,19 @@ public class OrdemServicoService
     {
         var periodos = await _db.OrdensServico
             .AsNoTracking()
-            .Where(o => o.DataFinalizacao != null)
-            .Select(o => new { o.DataCriacao, DataFinalizacao = o.DataFinalizacao!.Value })
+            .Where(o => o.DataInicioExecucao != null && o.DataFinalizacao != null)
+            .Select(o => new
+            {
+                DataInicioExecucao = o.DataInicioExecucao!.Value,
+                DataFinalizacao = o.DataFinalizacao!.Value
+            })
             .ToListAsync();
 
         if (periodos.Count == 0)
             return ServiceResult<TempoMedioExecucaoDto>.Ok(
                 new TempoMedioExecucaoDto(0, 0, 0, 0, "00:00:00"));
 
-        var mediaSegundos = periodos.Average(p => (p.DataFinalizacao - p.DataCriacao).TotalSeconds);
+        var mediaSegundos = periodos.Average(p => (p.DataFinalizacao - p.DataInicioExecucao).TotalSeconds);
         var media = TimeSpan.FromSeconds(mediaSegundos);
 
         return ServiceResult<TempoMedioExecucaoDto>.Ok(new TempoMedioExecucaoDto(
@@ -129,7 +133,9 @@ public class OrdemServicoService
 
         ordem.Status = dto.NovoStatus;
 
-        if (dto.NovoStatus == StatusOrdemServico.Finalizada)
+        if (dto.NovoStatus == StatusOrdemServico.EmExecucao)
+            ordem.DataInicioExecucao = DateTime.UtcNow;
+        else if (dto.NovoStatus == StatusOrdemServico.Finalizada)
             ordem.DataFinalizacao = DateTime.UtcNow;
         else if (dto.NovoStatus == StatusOrdemServico.Entregue)
             ordem.DataEntrega = DateTime.UtcNow;
@@ -330,6 +336,7 @@ public class OrdemServicoService
         o.OrcamentoAprovado,
         o.DataAprovacaoOrcamento,
         o.DataPrevisaoTermino,
+        o.DataInicioExecucao,
         o.DataFinalizacao,
         o.DataEntrega,
         o.DataCriacao,

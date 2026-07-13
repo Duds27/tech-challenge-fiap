@@ -46,6 +46,7 @@ public record OrdemServicoDto(
     bool OrcamentoAprovado,
     DateTime? DataAprovacaoOrcamento,
     DateTime? DataPrevisaoTermino,
+    DateTime? DataInicioExecucao,
     DateTime? DataFinalizacao,
     DateTime? DataEntrega,
     DateTime DataCriacao,
@@ -61,9 +62,9 @@ public record StatusPublicoDto(
 );
 
 /// <summary>
-/// Tempo médio de execução das ordens de serviço, medido do momento de
-/// criação (DataCriacao) até a finalização (DataFinalizacao). Apenas ordens
-/// já finalizadas são consideradas no cálculo.
+/// Tempo médio de execução das ordens de serviço, medido do início da
+/// execução (DataInicioExecucao) até a finalização (DataFinalizacao). Apenas
+/// ordens que já iniciaram a execução e foram finalizadas entram no cálculo.
 /// </summary>
 public record TempoMedioExecucaoDto(
     int OrdensConsideradas,

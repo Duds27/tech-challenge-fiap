@@ -14,6 +14,7 @@ public class OrdemServico
     public bool OrcamentoAprovado { get; set; }
     public DateTime? DataAprovacaoOrcamento { get; set; }
     public DateTime? DataPrevisaoTermino { get; set; }
+    public DateTime? DataInicioExecucao { get; set; }
     public DateTime? DataFinalizacao { get; set; }
     public DateTime? DataEntrega { get; set; }
     public DateTime DataCriacao { get; set; }
