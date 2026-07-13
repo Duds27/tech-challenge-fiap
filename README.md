@@ -56,8 +56,21 @@ API REST para gestão de uma oficina mecânica de médio porte, desenvolvida com
 | Validação      | FluentValidation 11.3                                      |
 | Logging        | Serilog (console + arquivo rotativo)                       |
 | Documentação   | Swagger / Swashbuckle 6.9                                  |
-| Testes         | xUnit + WebApplicationFactory + SQLite in-memory           |
+| Testes         | xUnit + WebApplicationFactory + Testcontainers (MySQL)     |
 | Containers     | Docker + Docker Compose                                    |
+
+### Por que MySQL?
+
+A escolha do MySQL 8.4 como banco de dados para o domínio de oficina mecânica se justifica por:
+
+- **Modelo relacional aderente ao domínio** — as entidades (Cliente, Veículo, Ordem de Serviço, Item, Peça, Serviço) têm relacionamentos bem definidos e regras de integridade referencial (ex.: uma OS não pode existir sem cliente e veículo). Um banco relacional com chaves estrangeiras e constraints modela esse cenário de forma natural e segura, evitando dados órfãos.
+- **Consistência transacional (ACID)** — operações como adicionar itens à OS e debitar o estoque de peças precisam ser atômicas. O suporte transacional do MySQL (usado via `BeginTransactionAsync` no `OrdemServicoService`) garante que estoque e valor total nunca fiquem inconsistentes diante de falhas.
+- **Integridade e unicidade** — índices únicos (CPF/CNPJ do cliente, placa do veículo, número da OS) são aplicados no nível do banco, oferecendo uma última linha de defesa contra duplicidades mesmo sob concorrência.
+- **Custo e ecossistema** — é open source, gratuito, maduro e amplamente suportado, com imagem Docker oficial (`mysql:8.4`), o que simplifica desenvolvimento, CI e deploy sem custo de licenciamento.
+- **Suporte de primeira classe no EF Core** — o provider Pomelo é estável e amplamente adotado, permitindo migrations versionadas e produtividade no acesso a dados.
+- **Escala compatível com o caso de uso** — o volume de uma oficina (ordens, clientes, estoque) é atendido com folga por um RDBMS single-node, sem a complexidade operacional de bancos distribuídos ou a modelagem de um banco NoSQL, que não traria vantagem para dados fortemente relacionais.
+
+> Para refletir esse ambiente em testes, os testes de integração sobem uma instância **real** de MySQL 8.4 via Testcontainers (em vez de um SQLite in-memory), exercitando o mesmo provider e as mesmas migrations usados em produção.
 
 ---
 
@@ -80,7 +93,7 @@ Controllers  ──▶  Services  ──▶  AppDbContext (EF Core)  ──▶  
 ## Pré-requisitos
 
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (para rodar com Docker Compose)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (para rodar com Docker Compose **e para os testes de integração via Testcontainers**)
 - MySQL 8.4 (somente se rodar sem Docker)
 
 ---
@@ -306,6 +319,8 @@ cd OficinaMecanicaBackend
 dotnet test
 ```
 
+> **Docker é necessário para os testes de integração.** Eles sobem um contêiner MySQL 8.4 via Testcontainers; garanta que o Docker esteja em execução antes de rodar `dotnet test`. Os testes unitários (Validators/Services) não dependem de Docker.
+
 ### Estrutura
 
 | Categoria              | Localização              | Descrição                                             |
@@ -314,7 +329,7 @@ dotnet test
 | Unitários — Services   | `tests/.../Services/`    | OrdemServicoServiceTests, PecaServiceTests            |
 | Integração             | `tests/.../Integration/` | ClientesControllerTests, OrdensServicoControllerTests |
 
-Os testes de integração usam `WebApplicationFactory<Program>` com SQLite in-memory, substituindo o MySQL. O JWT também é reconfigurado com uma chave de teste para os testes de integração.
+Os testes unitários de Services usam SQLite in-memory (rápidos, sem dependências externas). Já os testes de integração usam `WebApplicationFactory<Program>` sobre um **MySQL 8.4 real provisionado via Testcontainers**, exercitando o mesmo provider (Pomelo) e as mesmas migrations do ambiente de produção — em vez de um banco substituto. O JWT é reconfigurado com uma chave de teste nesses testes.
 
 ### Cobertura
 
