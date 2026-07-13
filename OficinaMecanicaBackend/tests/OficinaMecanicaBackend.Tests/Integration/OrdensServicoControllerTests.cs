@@ -197,6 +197,36 @@ public class OrdensServicoControllerTests : IClassFixture<CustomWebApplicationFa
         Assert.False(string.IsNullOrEmpty(payload.TempoMedioFormatado));
     }
 
+    [Fact]
+    public async Task TempoMedioExecucao_ComOSFinalizada_ContabilizaOrdem()
+    {
+        await AuthorizeAsync();
+        var (cId, vId, _, _) = await SeedBaseAsync();
+
+        // Cria e leva a OS até Finalizada, passando por EmExecucao
+        var osResp = await _client.PostAsJsonAsync("/api/ordens-servico",
+            new { ClienteId = cId, VeiculoId = vId });
+        var os = await osResp.Content.ReadFromJsonAsync<IdResult>();
+
+        await _client.PutAsJsonAsync($"/api/ordens-servico/{os!.Id}/status",
+            new { NovoStatus = (int)StatusOrdemServico.EmDiagnostico });
+        await _client.PutAsJsonAsync($"/api/ordens-servico/{os.Id}/status",
+            new { NovoStatus = (int)StatusOrdemServico.AguardandoAprovacao });
+        await _client.PutAsJsonAsync($"/api/ordens-servico/{os.Id}/aprovar-orcamento",
+            new { Aprovado = true });
+        await _client.PutAsJsonAsync($"/api/ordens-servico/{os.Id}/status",
+            new { NovoStatus = (int)StatusOrdemServico.EmExecucao });
+        var finalizarResp = await _client.PutAsJsonAsync($"/api/ordens-servico/{os.Id}/status",
+            new { NovoStatus = (int)StatusOrdemServico.Finalizada });
+        Assert.Equal(HttpStatusCode.OK, finalizarResp.StatusCode);
+
+        var payload = await _client.GetFromJsonAsync<TempoMedioExecucaoResult>(
+            "/api/ordens-servico/tempo-medio-execucao");
+
+        Assert.NotNull(payload);
+        Assert.True(payload!.OrdensConsideradas >= 1);
+    }
+
     // ── DTOs para deserialização ──
     private record IdResult(int Id);
     private record TempoMedioExecucaoResult(

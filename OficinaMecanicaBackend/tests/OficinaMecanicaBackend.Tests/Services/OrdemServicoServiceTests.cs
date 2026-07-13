@@ -69,7 +69,7 @@ public class OrdemServicoServiceTests : IDisposable
     }
 
     private async Task<OrdemServico> SeedOrdemFinalizadaAsync(int clienteId, int veiculoId,
-        DateTime dataCriacao, DateTime dataFinalizacao)
+        DateTime dataInicioExecucao, DateTime dataFinalizacao)
     {
         var os = new OrdemServico
         {
@@ -78,7 +78,8 @@ public class OrdemServicoServiceTests : IDisposable
             VeiculoId = veiculoId,
             Status = StatusOrdemServico.Finalizada,
             ValorTotal = 0,
-            DataCriacao = dataCriacao,
+            DataCriacao = dataInicioExecucao.AddHours(-1),
+            DataInicioExecucao = dataInicioExecucao,
             DataFinalizacao = dataFinalizacao
         };
         _db.OrdensServico.Add(os);
@@ -128,6 +129,20 @@ public class OrdemServicoServiceTests : IDisposable
 
         Assert.True(result.Success);
         Assert.Equal(StatusOrdemServico.EmDiagnostico, result.Data!.Status);
+    }
+
+    [Fact]
+    public async Task AdvanceStatusAsync_EmExecucao_DefineDataInicioExecucao()
+    {
+        var (c, v) = await SeedClienteVeiculoAsync();
+        var os = await SeedOrdemAsync(c.Id, v.Id, StatusOrdemServico.AguardandoAprovacao, orcamentoAprovado: true);
+
+        var result = await _service.AdvanceStatusAsync(os.Id,
+            new UpdateStatusDto(StatusOrdemServico.EmExecucao));
+
+        Assert.True(result.Success);
+        Assert.Equal(StatusOrdemServico.EmExecucao, result.Data!.Status);
+        Assert.NotNull(result.Data.DataInicioExecucao);
     }
 
     [Fact]

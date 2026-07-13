@@ -214,6 +214,7 @@ Sobrescreva qualquer configuração via variáveis de ambiente usando `__` como 
 | Método | Rota                                         | Auth    | Descrição                                 |
 | ------ | -------------------------------------------- | ------- | ----------------------------------------- |
 | GET    | `/api/ordens-servico`                        | Sim     | Lista todas as OS                         |
+| GET    | `/api/ordens-servico/tempo-medio-execucao`   | Sim     | Tempo médio de execução das OS            |
 | GET    | `/api/ordens-servico/{id}`                   | Sim     | Busca OS por ID                           |
 | POST   | `/api/ordens-servico`                        | Sim     | Cria OS (NumeroOS gerado automaticamente) |
 | PUT    | `/api/ordens-servico/{id}/status`            | Sim     | Avança status da OS                       |
@@ -223,6 +224,18 @@ Sobrescreva qualquer configuração via variáveis de ambiente usando `__` como 
 | DELETE | `/api/ordens-servico/{id}/itens/{itemId}`    | Sim     | Remove item da OS                         |
 
 > Os endpoints de aprovação de orçamento e consulta de status são públicos (sem JWT) para que o cliente possa acompanhar e aprovar remotamente.
+
+O endpoint `GET /api/ordens-servico/tempo-medio-execucao` retorna o tempo médio de execução das OS, medido do início da execução (`DataInicioExecucao`, gravada na transição para `EmExecucao`) até a finalização (`DataFinalizacao`). Apenas ordens que iniciaram a execução e foram finalizadas entram no cálculo. Resposta:
+
+```json
+{
+  "ordensConsideradas": 12,
+  "tempoMedioSegundos": 10800,
+  "tempoMedioMinutos": 180,
+  "tempoMedioHoras": 3,
+  "tempoMedioFormatado": "03:00:00"
+}
+```
 
 ---
 
@@ -247,8 +260,10 @@ Finalizada
 Entregue
 ```
 
-Transições fora dessa sequência retornam **400 Bad Request**.  
+Transições fora dessa sequência retornam **400 Bad Request**.
 Tentar avançar para "Em Execução" sem aprovação de orçamento também retorna **400**.
+
+A cada transição, a data correspondente é registrada: `DataInicioExecucao` (Em Execução), `DataFinalizacao` (Finalizada) e `DataEntrega` (Entregue). Essas marcações alimentam o cálculo do tempo médio de execução.
 
 ---
 
