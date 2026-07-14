@@ -1,2 +1,3 @@
 .vs/
 OficinaMecanicaBackend/tests/OficinaMecanicaBackend.Tests/TestResults/
+infra/.terraform/

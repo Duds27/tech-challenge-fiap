@@ -4,13 +4,86 @@ API REST para gestão de uma oficina mecânica de médio porte, desenvolvida com
 
 ---
 
+## Fase 2 — Infraestrutura, Escalabilidade e Automação
+
+A Fase 2 evolui a aplicação da Fase 1 para garantir **qualidade, resiliência e
+escalabilidade**, incorporando práticas modernas de infraestrutura e automação.
+
+### Objetivos e o que foi entregue
+
+| Requisito | Entrega |
+| --------- | ------- |
+| **Clean Architecture** | Refatoração em 4 projetos (Domain / Application / Infrastructure / API) com inversão de dependências via ports. Ver [Arquitetura](#arquitetura). |
+| **Clean Code + testes** | Casos de uso coesos, nomes claros; testes unitários (casos de uso sobre SQLite) e de integração (Testcontainers/MySQL). |
+| **Abertura / Consulta de status / Aprovação de orçamento** | Endpoints de OS mantidos e migrados para casos de uso. Ver [Endpoints](#endpoints-da-api). |
+| **Listagem de OS ordenada** | `GET /api/ordens-servico` ordena por prioridade de status (Em Execução → Aguardando Aprovação → Em Diagnóstico → Recebida), mais antigas primeiro, e **exclui logicamente** OS finalizadas/entregues (`?incluirConcluidas=true` para incluí-las). |
+| **Atualização de status via e-mail** | A cada transição de status, o caso de uso dispara `INotificadorStatus`; o adapter grava um registro de **outbox** (`NotificacoesOutbox`) e loga o envio (e-mail **simulado**, sem SMTP real). |
+| **Conteinerização** | `Dockerfile` (multi-stage, usuário não-root) + `docker-compose.yml` para desenvolvimento local. |
+| **Kubernetes** | Manifestos em [`/k8s`](k8s): Namespace, ConfigMap, Secret, MySQL (StatefulSet + PVC), API (Deployment + Service com probes) e **HPA**. |
+| **IaC (Terraform)** | Scripts em [`/infra`](infra) que provisionam um cluster **kind**, instalam o metrics-server, buildam/carregam a imagem e aplicam os manifestos. |
+| **CI/CD** | GitHub Actions em [`.github/workflows`](.github/workflows): `ci.yml` (build + testes) e `cd.yml` (build/push da imagem + deploy num kind no runner). |
+
+### Arquitetura de infraestrutura
+
+```mermaid
+flowchart TB
+  dev[Desenvolvedor] -->|git push| gh[GitHub]
+  gh --> ci["GitHub Actions CI<br/>build + testes"]
+  gh --> cd["GitHub Actions CD<br/>build imagem + deploy"]
+  cd -->|docker build/push| ghcr[(GHCR)]
+  cd -->|kubectl apply -k| cluster
+  subgraph cluster["Cluster Kubernetes (namespace oficina)"]
+    subgraph apipods["Deployment api (2..10 réplicas)"]
+      p1[Pod API]
+      p2[Pod API]
+    end
+    svc[Service api] --> apipods
+    hpa["HPA<br/>CPU 70% / Mem 80%"] -. escala .-> apipods
+    ms[metrics-server] -. métricas .-> hpa
+    apipods -->|EF Core| mysql[(StatefulSet MySQL + PVC)]
+    cfg[ConfigMap] -. envFrom .-> apipods
+    sec[Secret] -. envFrom .-> apipods
+  end
+```
+
+### Fluxo de deploy
+
+```mermaid
+flowchart LR
+  A[Push na main] --> B[CI: restore/build/test]
+  B --> C[CD: docker build]
+  C --> D[Push GHCR]
+  C --> E[Cria cluster kind]
+  E --> F[Instala metrics-server]
+  F --> G[kubectl apply -k k8s/]
+  G --> H[Deploy MySQL + API + HPA]
+  H --> I[rollout status + smoke test]
+```
+
+### Collection das APIs
+
+- **Swagger UI** (disponível em ambiente Development): `http://localhost:8080/swagger` — contém todos os endpoints e schemas. O JSON OpenAPI fica em `http://localhost:8080/swagger/v1/swagger.json` e pode ser importado no Postman/Insomnia.
+
+### Vídeo demonstrativo
+
+- 🎬 **Link do vídeo (≤ 15 min):** _[adicionar link do YouTube/Vimeo]_ — demonstra deploy, execução do CI/CD, consumo das APIs e escalabilidade automática (HPA sob carga).
+
+### Entrega
+
+- Repositório compartilhado com o usuário **`soat-architecture`** (passo manual no GitHub: _Settings → Collaborators_).
+
+---
+
 ## Sumário
 
+- [Fase 2 — Infraestrutura, Escalabilidade e Automação](#fase-2--infraestrutura-escalabilidade-e-automação)
 - [Dicionário de Linguagem Ubíqua](#dicionário-de-linguagem-ubíqua)
 - [Stack Tecnológica](#stack-tecnológica)
 - [Arquitetura](#arquitetura)
 - [Pré-requisitos](#pré-requisitos)
 - [Como Executar](#como-executar)
+- [Deploy em Kubernetes](#deploy-em-kubernetes)
+- [Provisionamento com Terraform](#provisionamento-com-terraform)
 - [Configuração](#configuração)
 - [Endpoints da API](#endpoints-da-api)
 - [Fluxo de Status da OS](#fluxo-de-status-da-os)
@@ -64,7 +137,7 @@ API REST para gestão de uma oficina mecânica de médio porte, desenvolvida com
 A escolha do MySQL 8.4 como banco de dados para o domínio de oficina mecânica se justifica por:
 
 - **Modelo relacional aderente ao domínio** — as entidades (Cliente, Veículo, Ordem de Serviço, Item, Peça, Serviço) têm relacionamentos bem definidos e regras de integridade referencial (ex.: uma OS não pode existir sem cliente e veículo). Um banco relacional com chaves estrangeiras e constraints modela esse cenário de forma natural e segura, evitando dados órfãos.
-- **Consistência transacional (ACID)** — operações como adicionar itens à OS e debitar o estoque de peças precisam ser atômicas. O suporte transacional do MySQL (usado via `BeginTransactionAsync` no `OrdemServicoService`) garante que estoque e valor total nunca fiquem inconsistentes diante de falhas.
+- **Consistência transacional (ACID)** — operações como adicionar itens à OS e debitar o estoque de peças precisam ser atômicas. O suporte transacional do MySQL (usado via `IUnitOfWork.IniciarTransacaoAsync` no caso de uso de OS) garante que estoque e valor total nunca fiquem inconsistentes diante de falhas.
 - **Integridade e unicidade** — índices únicos (CPF/CNPJ do cliente, placa do veículo, número da OS) são aplicados no nível do banco, oferecendo uma última linha de defesa contra duplicidades mesmo sob concorrência.
 - **Custo e ecossistema** — é open source, gratuito, maduro e amplamente suportado, com imagem Docker oficial (`mysql:8.4`), o que simplifica desenvolvimento, CI e deploy sem custo de licenciamento.
 - **Suporte de primeira classe no EF Core** — o provider Pomelo é estável e amplamente adotado, permitindo migrations versionadas e produtividade no acesso a dados.
@@ -76,17 +149,48 @@ A escolha do MySQL 8.4 como banco de dados para o domínio de oficina mecânica 
 
 ## Arquitetura
 
-Monolito em camadas simples (single-project), organizado em:
+A aplicação segue **Clean Architecture**, dividida em quatro projetos com a regra de
+dependência sempre apontando para o domínio (`API → Application → Domain`,
+`Infrastructure → Application/Domain`):
 
-```
-Controllers  ──▶  Services  ──▶  AppDbContext (EF Core)  ──▶  MySQL
-                     │
-                 Validators (FluentValidation)
-                 DTOs (records imutáveis)
-                 Models (entidades de domínio)
+```mermaid
+flowchart LR
+  subgraph API["API — adapters de entrada"]
+    C[Controllers]
+    HC[Health checks]
+    SW[Swagger / JWT]
+  end
+  subgraph APP["Application — casos de uso + ports"]
+    UC[Use Cases]
+    PO[Ports/Interfaces]
+    DV[DTOs / Validators]
+  end
+  subgraph DOM["Domain — regras de negócio"]
+    EN[Entidades + Enums]
+  end
+  subgraph INF["Infrastructure — adapters de saída"]
+    RE[Repositórios EF]
+    UW[UnitOfWork]
+    NO[Notificador e-mail]
+    AU[JWT Autenticador]
+  end
+  DB[(MySQL)]
+  C --> UC
+  UC --> EN
+  UC --> PO
+  PO -. implementado por .-> RE
+  PO -. implementado por .-> UW
+  PO -. implementado por .-> NO
+  PO -. implementado por .-> AU
+  RE --> DB
 ```
 
-**Padrão de resposta de serviço:** `ServiceResult<T>` encapsula sucesso/erro e o HTTP status code correspondente, mantendo os controllers finos.
+- **Domain** — entidades e regras puras (transições de status da OS, prioridade de listagem, marcos de data). Sem dependências externas.
+- **Application** — casos de uso (interactors) que orquestram o domínio através de **ports** (interfaces): repositórios, unidade de trabalho, notificador de status e autenticador. Contém DTOs e validators.
+- **Infrastructure** — adapters de saída: repositórios EF Core, `UnitOfWork`, `EmailNotificadorStatus` (outbox), `JwtAutenticador`, `AppDbContext` e migrations.
+- **API** — adapters de entrada: controllers, Swagger, JWT, health checks e composição por injeção de dependência.
+
+**Padrão de resposta:** `ServiceResult<T>` encapsula sucesso/erro e o HTTP status code correspondente, mantendo os controllers finos.
 
 ---
 
@@ -115,11 +219,46 @@ O Swagger UI estará em `http://localhost:8080/swagger`.
 2. Execute:
 
 ```bash
-cd OficinaMecanicaBackend/src/OficinaMecanicaBackend
+cd OficinaMecanicaBackend/src/OficinaMecanica.API
 dotnet run
 ```
 
-As migrations são aplicadas automaticamente na inicialização.
+As migrations são aplicadas automaticamente na inicialização (com retry, aguardando o banco ficar disponível).
+
+---
+
+## Deploy em Kubernetes
+
+Os manifestos estão em [`/k8s`](k8s) (detalhes em [`k8s/README.md`](k8s/README.md)). Requerem um cluster (localmente via **kind**) com **metrics-server** instalado.
+
+```bash
+# 1. Build da imagem e carga no cluster kind
+docker build -t oficina-mecanica-api:local OficinaMecanicaBackend
+kind load docker-image oficina-mecanica-api:local --name oficina
+
+# 2. Aplica Namespace, ConfigMap, Secret, MySQL, API e HPA
+kubectl apply -k k8s/
+kubectl -n oficina rollout status deploy/api
+
+# 3. Acesso local
+kubectl -n oficina port-forward svc/api 8080:80   # http://localhost:8080/swagger
+```
+
+Para observar a **escalabilidade automática**, gere carga contra o Service e acompanhe `kubectl -n oficina get hpa api -w`.
+
+---
+
+## Provisionamento com Terraform
+
+Os scripts em [`/infra`](infra) (detalhes em [`infra/README.md`](infra/README.md)) criam o cluster kind, instalam o metrics-server, buildam/carregam a imagem e aplicam os manifestos — tudo num `apply`:
+
+```bash
+cd infra
+terraform init
+terraform apply
+```
+
+Ao final, faça `kubectl -n oficina port-forward svc/api 8080:80` e acesse o Swagger. Para remover tudo: `terraform destroy`.
 
 ---
 
@@ -226,7 +365,7 @@ Sobrescreva qualquer configuração via variáveis de ambiente usando `__` como 
 
 | Método | Rota                                         | Auth    | Descrição                                 |
 | ------ | -------------------------------------------- | ------- | ----------------------------------------- |
-| GET    | `/api/ordens-servico`                        | Sim     | Lista todas as OS                         |
+| GET    | `/api/ordens-servico`                        | Sim     | Lista OS ativas, ordenadas por prioridade (`?incluirConcluidas=true` inclui finalizadas/entregues) |
 | GET    | `/api/ordens-servico/tempo-medio-execucao`   | Sim     | Tempo médio de execução das OS            |
 | GET    | `/api/ordens-servico/{id}`                   | Sim     | Busca OS por ID                           |
 | POST   | `/api/ordens-servico`                        | Sim     | Cria OS (NumeroOS gerado automaticamente) |
@@ -237,6 +376,17 @@ Sobrescreva qualquer configuração via variáveis de ambiente usando `__` como 
 | DELETE | `/api/ordens-servico/{id}/itens/{itemId}`    | Sim     | Remove item da OS                         |
 
 > Os endpoints de aprovação de orçamento e consulta de status são públicos (sem JWT) para que o cliente possa acompanhar e aprovar remotamente.
+
+**Listagem ordenada:** `GET /api/ordens-servico` retorna as OS **ativas** ordenadas por prioridade de status (Em Execução → Aguardando Aprovação → Em Diagnóstico → Recebida) e, no mesmo status, das mais antigas para as mais recentes. OS **finalizadas** e **entregues** são omitidas (exclusão lógica); use `?incluirConcluidas=true` para incluí-las.
+
+**Notificação por e-mail:** a cada avanço de status (`PUT /{id}/status`), a aplicação registra uma notificação na tabela `NotificacoesOutbox` e emite um log (envio de e-mail **simulado**).
+
+### Health checks
+
+| Método | Rota | Auth | Descrição |
+| ------ | ---- | ---- | --------- |
+| GET | `/health/live` | **Não** | Liveness — processo de pé. |
+| GET | `/health/ready` | **Não** | Readiness — banco de dados acessível. |
 
 O endpoint `GET /api/ordens-servico/tempo-medio-execucao` retorna o tempo médio de execução das OS, medido do início da execução (`DataInicioExecucao`, gravada na transição para `EmExecucao`) até a finalização (`DataFinalizacao`). Apenas ordens que iniciaram a execução e foram finalizadas entram no cálculo. Resposta:
 
@@ -326,7 +476,7 @@ dotnet test
 | Categoria              | Localização              | Descrição                                             |
 | ---------------------- | ------------------------ | ----------------------------------------------------- |
 | Unitários — Validators | `tests/.../Validators/`  | CpfCnpjValidatorTests, PlacaValidatorTests            |
-| Unitários — Services   | `tests/.../Services/`    | OrdemServicoServiceTests, PecaServiceTests            |
+| Unitários — Casos de uso | `tests/.../Services/`  | OrdemServicoUseCasesTests, PecaUseCasesTests          |
 | Integração             | `tests/.../Integration/` | ClientesControllerTests, OrdensServicoControllerTests |
 
 Os testes unitários de Services usam SQLite in-memory (rápidos, sem dependências externas). Já os testes de integração usam `WebApplicationFactory<Program>` sobre um **MySQL 8.4 real provisionado via Testcontainers**, exercitando o mesmo provider (Pomelo) e as mesmas migrations do ambiente de produção — em vez de um banco substituto. O JWT é reconfigurado com uma chave de teste nesses testes.
@@ -436,30 +586,24 @@ powershell -ExecutionPolicy Bypass -File .\security\run-zap-scan.ps1 -ScanType F
 ## Estrutura do Projeto
 
 ```
-OficinaMecanicaBackend/
-├── src/OficinaMecanicaBackend/
-│   ├── Controllers/          # AuthController, ClientesController, VeiculosController,
-│   │                         #   PecasController, ServicosController, OrdensServicoController
-│   ├── Data/
-│   │   └── AppDbContext.cs   # EF Core DbContext com Fluent API
-│   ├── DTOs/                 # Records imutáveis por domínio (Auth, Clientes, Veiculos, ...)
-│   ├── Migrations/           # Migrações EF Core
-│   ├── Models/
-│   │   ├── Enums/            # StatusOrdemServico, TipoItemOrdemServico
-│   │   └── *.cs              # Cliente, Veiculo, Peca, Servico, OrdemServico, ItemOrdemServico
-│   ├── Services/
-│   │   ├── ServiceResult.cs  # Wrapper de resultado tipado com HTTP status code
-│   │   └── *.cs              # AuthService, ClienteService, VeiculoService, ...
-│   ├── Validators/           # FluentValidation + CpfCnpjValidator + PlacaValidator
-│   ├── appsettings.json
+.
+├── OficinaMecanicaBackend/
+│   ├── src/
+│   │   ├── OficinaMecanica.Domain/         # Entidades, Enums e regras de negócio puras
+│   │   ├── OficinaMecanica.Application/     # Casos de uso, Ports, DTOs, Validators, ServiceResult
+│   │   ├── OficinaMecanica.Infrastructure/ # AppDbContext, Repositórios EF, UnitOfWork,
+│   │   │                                   #   EmailNotificadorStatus, JwtAutenticador, Migrations
+│   │   └── OficinaMecanica.API/            # Controllers, Program.cs (DI), Swagger, HealthChecks
+│   ├── tests/OficinaMecanicaBackend.Tests/
+│   │   ├── Infrastructure/  # CustomWebApplicationFactory (Testcontainers), IntegrationTestCollection
+│   │   ├── Integration/     # Testes de integração HTTP (MySQL real via Testcontainers)
+│   │   ├── Services/        # Testes de casos de uso (SQLite) + FakeNotificador/TestLogger
+│   │   └── Validators/      # Testes unitários de validators
 │   ├── Dockerfile
-│   └── Program.cs
-├── tests/OficinaMecanicaBackend.Tests/
-│   ├── Infrastructure/       # CustomWebApplicationFactory, IntegrationTestCollection
-│   ├── Integration/          # Testes de integração HTTP
-│   ├── Services/             # Testes unitários de services
-│   └── Validators/           # Testes unitários de validators
-└── docker-compose.yml
+│   └── docker-compose.yml
+├── k8s/                     # Manifestos Kubernetes (Namespace, ConfigMap, Secret, MySQL, API, HPA)
+├── infra/                  # Terraform (cluster kind + metrics-server + deploy)
+└── .github/workflows/      # Pipelines CI (build+testes) e CD (imagem + deploy no kind)
 ```
 
 ---
@@ -474,5 +618,6 @@ O schema é gerenciado via EF Core Migrations e aplicado automaticamente na inic
 | `Veiculos`          | Veículos vinculados a clientes (placa única)                 |
 | `Pecas`             | Catálogo de peças com controle de estoque                    |
 | `Servicos`          | Catálogo de serviços com preço-base                          |
-| `OrdensServico`     | Ordens de serviço (NumeroOS único, formato `OS-YYYY-000001`) |
+| `OrdensServico`     | Ordens de serviço (NumeroOS único; marcos `DataInicioExecucao`/`DataFinalizacao`) |
 | `ItensOrdenServico` | Itens de OS (serviços e peças com preço snapshot)            |
+| `NotificacoesOutbox`| Registro (outbox) das notificações de mudança de status da OS |
