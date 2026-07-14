@@ -11,17 +11,17 @@ escalabilidade**, incorporando práticas modernas de infraestrutura e automaçã
 
 ### Objetivos e o que foi entregue
 
-| Requisito | Entrega |
-| --------- | ------- |
-| **Clean Architecture** | Refatoração em 4 projetos (Domain / Application / Infrastructure / API) com inversão de dependências via ports. Ver [Arquitetura](#arquitetura). |
-| **Clean Code + testes** | Casos de uso coesos, nomes claros; testes unitários (casos de uso sobre SQLite) e de integração (Testcontainers/MySQL). |
-| **Abertura / Consulta de status / Aprovação de orçamento** | Endpoints de OS mantidos e migrados para casos de uso. Ver [Endpoints](#endpoints-da-api). |
-| **Listagem de OS ordenada** | `GET /api/ordens-servico` ordena por prioridade de status (Em Execução → Aguardando Aprovação → Em Diagnóstico → Recebida), mais antigas primeiro, e **exclui logicamente** OS finalizadas/entregues (`?incluirConcluidas=true` para incluí-las). |
-| **Atualização de status via e-mail** | A cada transição de status, o caso de uso dispara `INotificadorStatus`; o adapter grava um registro de **outbox** (`NotificacoesOutbox`) e loga o envio (e-mail **simulado**, sem SMTP real). |
-| **Conteinerização** | `Dockerfile` (multi-stage, usuário não-root) + `docker-compose.yml` para desenvolvimento local. |
-| **Kubernetes** | Manifestos em [`/k8s`](k8s): Namespace, ConfigMap, Secret, MySQL (StatefulSet + PVC), API (Deployment + Service com probes) e **HPA**. |
-| **IaC (Terraform)** | Scripts em [`/infra`](infra) que provisionam um cluster **kind**, instalam o metrics-server, buildam/carregam a imagem e aplicam os manifestos. |
-| **CI/CD** | GitHub Actions em [`.github/workflows`](.github/workflows): `ci.yml` (build + testes) e `cd.yml` (build/push da imagem + deploy num kind no runner). |
+| Requisito                                                  | Entrega                                                                                                                                                                                                                                           |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Clean Architecture**                                     | Refatoração em 4 projetos (Domain / Application / Infrastructure / API) com inversão de dependências via ports. Ver [Arquitetura](#arquitetura).                                                                                                  |
+| **Clean Code + testes**                                    | Casos de uso coesos, nomes claros; testes unitários (casos de uso sobre SQLite) e de integração (Testcontainers/MySQL).                                                                                                                           |
+| **Abertura / Consulta de status / Aprovação de orçamento** | Endpoints de OS mantidos e migrados para casos de uso. Ver [Endpoints](#endpoints-da-api).                                                                                                                                                        |
+| **Listagem de OS ordenada**                                | `GET /api/ordens-servico` ordena por prioridade de status (Em Execução → Aguardando Aprovação → Em Diagnóstico → Recebida), mais antigas primeiro, e **exclui logicamente** OS finalizadas/entregues (`?incluirConcluidas=true` para incluí-las). |
+| **Atualização de status via e-mail**                       | A cada transição de status, o caso de uso dispara `INotificadorStatus`; o adapter grava um registro de **outbox** (`NotificacoesOutbox`) e loga o envio (e-mail **simulado**, sem SMTP real).                                                     |
+| **Conteinerização**                                        | `Dockerfile` (multi-stage, usuário não-root) + `docker-compose.yml` para desenvolvimento local.                                                                                                                                                   |
+| **Kubernetes**                                             | Manifestos em [`/k8s`](k8s): Namespace, ConfigMap, Secret, MySQL (StatefulSet + PVC), API (Deployment + Service com probes) e **HPA**.                                                                                                            |
+| **IaC (Terraform)**                                        | Scripts em [`/infra`](infra) que provisionam um cluster **kind**, instalam o metrics-server, buildam/carregam a imagem e aplicam os manifestos.                                                                                                   |
+| **CI/CD**                                                  | GitHub Actions em [`.github/workflows`](.github/workflows): `ci.yml` (build + testes) e `cd.yml` (build/push da imagem + deploy num kind no runner).                                                                                              |
 
 ### Arquitetura de infraestrutura
 
@@ -232,16 +232,50 @@ As migrations são aplicadas automaticamente na inicialização (com retry, agua
 Os manifestos estão em [`/k8s`](k8s) (detalhes em [`k8s/README.md`](k8s/README.md)). Requerem um cluster (localmente via **kind**) com **metrics-server** instalado.
 
 ```bash
-# 1. Build da imagem e carga no cluster kind
+# 1. Instalar somente se não estiver instalada (On Windows)
+winget install Docker.DockerDesktop
+winget install Kubernetes.kind
+winget install Kubernetes.kubectl
+winget install k6 --source winget
+
+# 2. Checar se aplicações estão instaladas
+docker version
+kind version
+kubectl version --client
+k6 version
+
+# 3. Abrir o Docker Desktop client no Desktop do Windows
+
+# 4. Criar o cluster kind
+kind create cluster --name oficina
+kubectl config use-context kind-oficina
+kubectl get nodes
+
+# 5. Build da imagem e carga no cluster kind
+cd <path_to_this_project> # precisa estar no root deste projeto
 docker build -t oficina-mecanica-api:local OficinaMecanicaBackend
 kind load docker-image oficina-mecanica-api:local --name oficina
 
-# 2. Aplica Namespace, ConfigMap, Secret, MySQL, API e HPA
-kubectl apply -k k8s/
-kubectl -n oficina rollout status deploy/api
+# 6. Instal o metrics-server (necessário para o HPA)
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
 
-# 3. Acesso local
+# 7. Aplica Namespace, ConfigMap, Secret, MySQL, API e HPA
+kubectl apply -k k8s/
+
+# 8. Aguardar e verificar
+kubectl -n oficina rollout status statefulset/mysql
+kubectl -n oficina rollout status deploy/api
+kubectl -n oficina get pods,svc,hpa
+
+# 9. Acesso local a API
 kubectl -n oficina port-forward svc/api 8080:80   # http://localhost:8080/swagger
+
+# 10. Checar no browser
+http://localhost:8080/swagger
+http://localhost:8080/health/ready
+
+# 11. Limpar o ambiente
+kind delete cluster --name oficina
 ```
 
 Para observar a **escalabilidade automática**, gere carga contra o Service e acompanhe `kubectl -n oficina get hpa api -w`.
@@ -253,9 +287,48 @@ Para observar a **escalabilidade automática**, gere carga contra o Service e ac
 Os scripts em [`/infra`](infra) (detalhes em [`infra/README.md`](infra/README.md)) criam o cluster kind, instalam o metrics-server, buildam/carregam a imagem e aplicam os manifestos — tudo num `apply`:
 
 ```bash
+# 1. Instalar somente se não estiver instalada (On Windows)
+winget install Docker.DockerDesktop
+winget install Kubernetes.kind
+winget install Kubernetes.kubectl
+winget install k6 --source winget
+winget install Hashicorp.Terraform
+
+# 2. Checar se aplicações estão instaladas
+docker version
+kind version
+kubectl version --client
+k6 version
+terraform apply
+
+# 3. Abrir o Docker Desktop client no Desktop do Windows
 cd infra
 terraform init
 terraform apply
+
+# 4. Apontar para o kubectl para o cluster
+kubectl config use-context kind-oficina
+
+# 5. Verificar se subiu
+kubectl -n oficina rollout status deploy/api
+kubectl -n oficina get pods,svc,hpa
+
+# 6. Acesso local a API
+kubectl -n oficina port-forward svc/api 8080:80   # http://localhost:8080/swagger
+
+# 7. Checar no browser
+http://localhost:8080/swagger
+http://localhost:8080/health/ready
+
+# 8. Ver a escalabilidade automática (HPA)
+kubectl -n oficina get hpa api -w
+
+# 9. (Opcional) como forma de testar a carga
+cd k8s/loadtest
+k6 run load-test.js
+
+# 10. Limpar o ambiente
+terraform destroy
 ```
 
 Ao final, faça `kubectl -n oficina port-forward svc/api 8080:80` e acesse o Swagger. Para remover tudo: `terraform destroy`.
@@ -363,17 +436,17 @@ Sobrescreva qualquer configuração via variáveis de ambiente usando `__` como 
 
 ### Ordens de Serviço
 
-| Método | Rota                                         | Auth    | Descrição                                 |
-| ------ | -------------------------------------------- | ------- | ----------------------------------------- |
+| Método | Rota                                         | Auth    | Descrição                                                                                          |
+| ------ | -------------------------------------------- | ------- | -------------------------------------------------------------------------------------------------- |
 | GET    | `/api/ordens-servico`                        | Sim     | Lista OS ativas, ordenadas por prioridade (`?incluirConcluidas=true` inclui finalizadas/entregues) |
-| GET    | `/api/ordens-servico/tempo-medio-execucao`   | Sim     | Tempo médio de execução das OS            |
-| GET    | `/api/ordens-servico/{id}`                   | Sim     | Busca OS por ID                           |
-| POST   | `/api/ordens-servico`                        | Sim     | Cria OS (NumeroOS gerado automaticamente) |
-| PUT    | `/api/ordens-servico/{id}/status`            | Sim     | Avança status da OS                       |
-| PUT    | `/api/ordens-servico/{id}/aprovar-orcamento` | **Não** | Cliente aprova/recusa orçamento           |
-| GET    | `/api/ordens-servico/{id}/status`            | **Não** | Status público da OS para o cliente       |
-| POST   | `/api/ordens-servico/{id}/itens`             | Sim     | Adiciona serviço ou peça à OS             |
-| DELETE | `/api/ordens-servico/{id}/itens/{itemId}`    | Sim     | Remove item da OS                         |
+| GET    | `/api/ordens-servico/tempo-medio-execucao`   | Sim     | Tempo médio de execução das OS                                                                     |
+| GET    | `/api/ordens-servico/{id}`                   | Sim     | Busca OS por ID                                                                                    |
+| POST   | `/api/ordens-servico`                        | Sim     | Cria OS (NumeroOS gerado automaticamente)                                                          |
+| PUT    | `/api/ordens-servico/{id}/status`            | Sim     | Avança status da OS                                                                                |
+| PUT    | `/api/ordens-servico/{id}/aprovar-orcamento` | **Não** | Cliente aprova/recusa orçamento                                                                    |
+| GET    | `/api/ordens-servico/{id}/status`            | **Não** | Status público da OS para o cliente                                                                |
+| POST   | `/api/ordens-servico/{id}/itens`             | Sim     | Adiciona serviço ou peça à OS                                                                      |
+| DELETE | `/api/ordens-servico/{id}/itens/{itemId}`    | Sim     | Remove item da OS                                                                                  |
 
 > Os endpoints de aprovação de orçamento e consulta de status são públicos (sem JWT) para que o cliente possa acompanhar e aprovar remotamente.
 
@@ -383,10 +456,10 @@ Sobrescreva qualquer configuração via variáveis de ambiente usando `__` como 
 
 ### Health checks
 
-| Método | Rota | Auth | Descrição |
-| ------ | ---- | ---- | --------- |
-| GET | `/health/live` | **Não** | Liveness — processo de pé. |
-| GET | `/health/ready` | **Não** | Readiness — banco de dados acessível. |
+| Método | Rota            | Auth    | Descrição                             |
+| ------ | --------------- | ------- | ------------------------------------- |
+| GET    | `/health/live`  | **Não** | Liveness — processo de pé.            |
+| GET    | `/health/ready` | **Não** | Readiness — banco de dados acessível. |
 
 O endpoint `GET /api/ordens-servico/tempo-medio-execucao` retorna o tempo médio de execução das OS, medido do início da execução (`DataInicioExecucao`, gravada na transição para `EmExecucao`) até a finalização (`DataFinalizacao`). Apenas ordens que iniciaram a execução e foram finalizadas entram no cálculo. Resposta:
 
@@ -473,11 +546,11 @@ dotnet test
 
 ### Estrutura
 
-| Categoria              | Localização              | Descrição                                             |
-| ---------------------- | ------------------------ | ----------------------------------------------------- |
-| Unitários — Validators | `tests/.../Validators/`  | CpfCnpjValidatorTests, PlacaValidatorTests            |
-| Unitários — Casos de uso | `tests/.../Services/`  | OrdemServicoUseCasesTests, PecaUseCasesTests          |
-| Integração             | `tests/.../Integration/` | ClientesControllerTests, OrdensServicoControllerTests |
+| Categoria                | Localização              | Descrição                                             |
+| ------------------------ | ------------------------ | ----------------------------------------------------- |
+| Unitários — Validators   | `tests/.../Validators/`  | CpfCnpjValidatorTests, PlacaValidatorTests            |
+| Unitários — Casos de uso | `tests/.../Services/`    | OrdemServicoUseCasesTests, PecaUseCasesTests          |
+| Integração               | `tests/.../Integration/` | ClientesControllerTests, OrdensServicoControllerTests |
 
 Os testes unitários de Services usam SQLite in-memory (rápidos, sem dependências externas). Já os testes de integração usam `WebApplicationFactory<Program>` sobre um **MySQL 8.4 real provisionado via Testcontainers**, exercitando o mesmo provider (Pomelo) e as mesmas migrations do ambiente de produção — em vez de um banco substituto. O JWT é reconfigurado com uma chave de teste nesses testes.
 
@@ -612,12 +685,12 @@ powershell -ExecutionPolicy Bypass -File .\security\run-zap-scan.ps1 -ScanType F
 
 O schema é gerenciado via EF Core Migrations e aplicado automaticamente na inicialização.
 
-| Tabela              | Descrição                                                    |
-| ------------------- | ------------------------------------------------------------ |
-| `Clientes`          | Cadastro de clientes (CPF/CNPJ único)                        |
-| `Veiculos`          | Veículos vinculados a clientes (placa única)                 |
-| `Pecas`             | Catálogo de peças com controle de estoque                    |
-| `Servicos`          | Catálogo de serviços com preço-base                          |
-| `OrdensServico`     | Ordens de serviço (NumeroOS único; marcos `DataInicioExecucao`/`DataFinalizacao`) |
-| `ItensOrdenServico` | Itens de OS (serviços e peças com preço snapshot)            |
-| `NotificacoesOutbox`| Registro (outbox) das notificações de mudança de status da OS |
+| Tabela               | Descrição                                                                         |
+| -------------------- | --------------------------------------------------------------------------------- |
+| `Clientes`           | Cadastro de clientes (CPF/CNPJ único)                                             |
+| `Veiculos`           | Veículos vinculados a clientes (placa única)                                      |
+| `Pecas`              | Catálogo de peças com controle de estoque                                         |
+| `Servicos`           | Catálogo de serviços com preço-base                                               |
+| `OrdensServico`      | Ordens de serviço (NumeroOS único; marcos `DataInicioExecucao`/`DataFinalizacao`) |
+| `ItensOrdenServico`  | Itens de OS (serviços e peças com preço snapshot)                                 |
+| `NotificacoesOutbox` | Registro (outbox) das notificações de mudança de status da OS                     |
