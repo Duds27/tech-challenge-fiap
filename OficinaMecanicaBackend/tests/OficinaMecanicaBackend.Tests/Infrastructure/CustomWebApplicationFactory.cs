@@ -3,9 +3,11 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using OficinaMecanica.Infrastructure.Data;
 using Testcontainers.MySql;
 using Xunit;
 
@@ -43,10 +45,12 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
         // Como o provedor continua sendo MySQL (idêntico ao de produção), não é
         // preciso substituir o DbContext: o Program.cs registra o provedor correto
         // e aplica as migrations no startup (db.Database.Migrate()).
+        // A connection string do banco é injetada substituindo o DbContext em
+        // ConfigureServices (ver abaixo); aqui ficam apenas as configurações de JWT
+        // usadas em runtime (ex.: assinatura do token via IConfiguration).
         builder.ConfigureAppConfiguration((_, config) =>
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["ConnectionStrings:DefaultConnection"] = _mySql.GetConnectionString(),
                 ["Jwt:Key"]              = TestJwtKey,
                 ["Jwt:Issuer"]          = TestJwtIssuer,
                 ["Jwt:Audience"]        = TestJwtAudience,
@@ -57,6 +61,19 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
 
         builder.ConfigureServices(services =>
         {
+            // Substitui o DbContext registrado pelo Program (que lê a connection string
+            // do appsettings ANTES do builder.Build(), portanto sem enxergar a injeção de
+            // configuração) pelo MySQL do container Testcontainers. Este override roda
+            // DURANTE o Build e tem precedência.
+            var descriptor = services.SingleOrDefault(
+                d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
+            if (descriptor is not null) services.Remove(descriptor);
+
+            services.AddDbContext<AppDbContext>(options =>
+                options.UseMySql(
+                    _mySql.GetConnectionString(),
+                    new MySqlServerVersion(new Version(8, 4, 0))));
+
             // Override JWT validation parameters so they match the test signing key.
             // Program.cs reads Jwt:Key at build-time (before ConfigureAppConfiguration
             // applies), so the middleware may have been configured with the appsettings
