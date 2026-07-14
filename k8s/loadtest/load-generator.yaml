@@ -1,0 +1,26 @@
+# Gerador de carga que roda DENTRO do cluster (sem port-forward), batendo no
+# Service interno da API em paralelo para forçar consumo de CPU e disparar o HPA.
+#
+#   kubectl apply -f k8s/loadtest/load-generator.yaml
+#   kubectl -n oficina get hpa api pods -w      # observe o scale-up
+#   kubectl -n oficina delete -f k8s/loadtest/load-generator.yaml   # para a carga
+apiVersion: v1
+kind: Pod
+metadata:
+  name: load-generator
+  namespace: oficina
+  labels:
+    app: load-generator
+spec:
+  restartPolicy: Never
+  containers:
+    - name: load
+      image: busybox:1.28
+      command:
+        - /bin/sh
+        - -c
+        - >
+          for i in 1 2 3 4 5 6 7 8; do
+            (while true; do wget -q -O- http://api/health/ready >/dev/null 2>&1; done) &
+          done;
+          wait

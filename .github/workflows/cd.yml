@@ -1,0 +1,65 @@
+name: CD
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-deploy:
+    name: Build da imagem + Deploy no Kubernetes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Definir nome da imagem (lowercase)
+        id: vars
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY,,}/oficina-mecanica-api" >> "$GITHUB_OUTPUT"
+
+      - name: Login no GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build da imagem Docker
+        run: >
+          docker build
+          -t oficina-mecanica-api:local
+          -t ${{ steps.vars.outputs.image }}:latest
+          -t ${{ steps.vars.outputs.image }}:${{ github.sha }}
+          OficinaMecanicaBackend
+
+      - name: Push para o GHCR
+        run: |
+          docker push ${{ steps.vars.outputs.image }}:latest
+          docker push ${{ steps.vars.outputs.image }}:${{ github.sha }}
+
+      - name: Criar cluster kind
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: oficina
+
+      - name: Carregar imagem no kind
+        run: kind load docker-image oficina-mecanica-api:local --name oficina
+
+      - name: Instalar metrics-server (necessário para o HPA)
+        run: |
+          kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+          kubectl -n kube-system patch deployment metrics-server --type=json \
+            -p='[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
+
+      - name: Deploy (banco + API + HPA)
+        run: |
+          kubectl apply -k k8s/
+          kubectl -n oficina rollout status statefulset/mysql --timeout=180s
+          kubectl -n oficina rollout status deployment/api --timeout=180s
+
+      - name: Verificar recursos
+        run: kubectl -n oficina get pods,svc,hpa

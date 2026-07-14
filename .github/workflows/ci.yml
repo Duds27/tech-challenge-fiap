@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-test:
+    name: Build e Testes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore OficinaMecanicaBackend/OficinaMecanicaBackend.sln
+
+      - name: Build
+        run: dotnet build OficinaMecanicaBackend/OficinaMecanicaBackend.sln -c Release --no-restore
+
+      # Os testes de integração sobem um MySQL via Testcontainers; o runner
+      # ubuntu-latest já possui Docker disponível.
+      - name: Test (unitários + integração)
+        run: >
+          dotnet test OficinaMecanicaBackend/OficinaMecanicaBackend.sln
+          -c Release --no-build --verbosity normal
+          --collect:"XPlat Code Coverage"
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: '**/TestResults/**/coverage.cobertura.xml'
+          if-no-files-found: ignore
