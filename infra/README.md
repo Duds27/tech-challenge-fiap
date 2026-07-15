@@ -52,6 +52,66 @@ kubectl -n oficina port-forward svc/api 8080:80
 terraform destroy
 ```
 
+## Troubleshooting
+
+### `node(s) already exist for a cluster with the name "oficina"`
+
+Já existe um cluster kind com esse nome (de um `apply`/`kind create` anterior que não
+foi destruído). Os nós do kind são containers Docker; remova o cluster órfão e refaça:
+
+```bash
+kind get clusters                        # confirma que "oficina" existe
+kind delete cluster --name oficina       # remove o cluster (e seus containers)
+docker ps -a --filter "name=oficina"     # opcional: confira se sobraram containers
+terraform apply                          # recria do zero
+```
+
+> Se o `terraform apply` reclamar que o recurso já está no state, rode `terraform destroy`
+> antes (após o `kind delete`, ele só acerta o state). Para evitar o problema, sempre
+> finalize com `terraform destroy` antes de um novo `apply`.
+
+### Reiniciar os pods (rollout restart)
+
+Recria os pods sem alterar os manifestos — útil após carregar uma nova imagem no kind
+ou para forçar a releitura de ConfigMap/Secret:
+
+```bash
+kubectl -n oficina rollout restart deployment/api      # reinicia a API (rolling)
+kubectl -n oficina rollout status deployment/api       # acompanha o rollout
+kubectl -n oficina rollout restart statefulset/mysql   # reinicia o MySQL (se necessário)
+```
+
+Alternativas pontuais:
+
+```bash
+kubectl -n oficina delete pod <nome-do-pod>            # recria só um pod (o Deployment sobe outro)
+kubectl -n oficina scale deployment/api --replicas=0   # derruba tudo...
+kubectl -n oficina scale deployment/api --replicas=2   # ...e sobe de novo
+```
+
+> Após buildar uma imagem nova, carregue-a no kind antes de reiniciar:
+> `docker build -t oficina-mecanica-api:local OficinaMecanicaBackend` →
+> `kind load docker-image oficina-mecanica-api:local --name oficina` →
+> `kubectl -n oficina rollout restart deployment/api`.
+
+### HPA com `TARGETS = <unknown>/70%`
+
+O metrics-server ainda está iniciando ou não coletou métricas. Verifique:
+
+```bash
+kubectl -n kube-system get deployment metrics-server   # deve estar 1/1
+```
+
+### Pod da API em `CrashLoopBackOff`
+
+Normalmente o MySQL ainda está subindo. O `Program.cs` tem retry de conexão no startup;
+acompanhe os logs e aguarde o `mysql-0` ficar `Ready`:
+
+```bash
+kubectl -n oficina get pods
+kubectl -n oficina logs deployment/api
+```
+
 > **Nota sobre cloud:** este módulo mira um ambiente **local (kind)**, conforme
 > escolhido para a Fase 2. Para nuvem (ex.: EKS/AKS/GKE), trocam-se os providers
 > `kind` + `metrics-server` por um módulo de cluster gerenciado e um banco gerenciado

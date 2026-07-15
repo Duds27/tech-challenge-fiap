@@ -1,3 +1,7 @@
 .vs/
 OficinaMecanicaBackend/tests/OficinaMecanicaBackend.Tests/TestResults/
 infra/.terraform/
+infra/terraform.tfstate
+infra/oficina-config
+infra/terraform.tfstate.backup
+infra/.terraform.lock.hcl
