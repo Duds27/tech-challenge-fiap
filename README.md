@@ -55,7 +55,7 @@ flowchart LR
   C --> D[Push GHCR]
   C --> E[Cria cluster kind]
   E --> F[Instala metrics-server]
-  F --> G[kubectl apply -k k8s/]
+  F --> G[kubectl apply -k k8s/overlays/local]
   G --> H[Deploy MySQL + API + HPA]
   H --> I[rollout status + smoke test]
 ```
@@ -259,8 +259,8 @@ kind load docker-image oficina-mecanica-api:local --name oficina
 # 6. Instal o metrics-server (necessário para o HPA)
 kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
 
-# 7. Aplica Namespace, ConfigMap, Secret, MySQL, API e HPA
-kubectl apply -k k8s/
+# 7. Aplica Namespace, ConfigMap, Secret, MySQL, API e HPA (overlay local)
+kubectl apply -k k8s/overlays/local
 
 # 8. Aguardar e verificar
 kubectl -n oficina rollout status statefulset/mysql

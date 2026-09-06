@@ -137,6 +137,12 @@ public class OrdemServicoUseCases
             await _uow.SalvarAsync();
         }
 
+        // Evento de negócio estruturado (base dos dashboards de observabilidade:
+        // volume diário de OS). O CorrelationId é adicionado pelo enricher do Serilog.
+        _logger.LogInformation(
+            "Ordem de serviço criada. Evento={Evento} NumeroOS={NumeroOS} ClienteId={ClienteId} VeiculoId={VeiculoId}",
+            "os_criada", ordem.NumeroOS, ordem.ClienteId, ordem.VeiculoId);
+
         var ordemComIncludes = await _ordens.ObterComIncludesAsync(ordem.Id, tracking: false);
         return ServiceResult<OrdemServicoDto>.Created(ToDto(ordemComIncludes!));
     }
@@ -155,7 +161,30 @@ public class OrdemServicoUseCases
         ordem.AplicarStatus(dto.NovoStatus, DateTime.UtcNow);
         await _uow.SalvarAsync();
 
-        await _notificador.NotificarMudancaStatusAsync(ordem, statusAnterior, dto.NovoStatus);
+        // Duração da fase de execução (Em Execução → Finalizada), em segundos, quando aplicável.
+        double? duracaoExecucaoSegundos =
+            dto.NovoStatus == StatusOrdemServico.Finalizada
+            && ordem.DataInicioExecucao.HasValue && ordem.DataFinalizacao.HasValue
+                ? (ordem.DataFinalizacao.Value - ordem.DataInicioExecucao.Value).TotalSeconds
+                : null;
+
+        // Evento de negócio estruturado: tempo médio por status e transições nos dashboards.
+        _logger.LogInformation(
+            "Status da OS alterado. Evento={Evento} NumeroOS={NumeroOS} StatusAnterior={StatusAnterior} StatusNovo={StatusNovo} DuracaoExecucaoSegundos={DuracaoExecucaoSegundos}",
+            "os_status_alterado", ordem.NumeroOS, statusAnterior.ToString(), dto.NovoStatus.ToString(), duracaoExecucaoSegundos);
+
+        try
+        {
+            await _notificador.NotificarMudancaStatusAsync(ordem, statusAnterior, dto.NovoStatus);
+        }
+        catch (Exception ex)
+        {
+            // Falha no processamento/notificação da OS — evento base do alerta de observabilidade.
+            _logger.LogError(ex,
+                "Falha ao processar notificação da OS. Evento={Evento} NumeroOS={NumeroOS} StatusNovo={StatusNovo}",
+                "os_falha_processamento", ordem.NumeroOS, dto.NovoStatus.ToString());
+            throw;
+        }
 
         return ServiceResult<OrdemServicoDto>.Ok(ToDto(ordem));
     }

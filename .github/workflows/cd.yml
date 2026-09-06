@@ -57,7 +57,7 @@ jobs:
 
       - name: Deploy (banco + API + HPA)
         run: |
-          kubectl apply -k k8s/
+          kubectl apply -k k8s/overlays/local
           kubectl -n oficina rollout status statefulset/mysql --timeout=180s
           kubectl -n oficina rollout status deployment/api --timeout=180s
 

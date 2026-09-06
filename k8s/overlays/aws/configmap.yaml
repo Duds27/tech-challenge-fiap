@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+  namespace: oficina
+  labels:
+    app.kubernetes.io/part-of: oficina-mecanica
+data:
+  ASPNETCORE_ENVIRONMENT: "Production"
+  ASPNETCORE_URLS: "http://+:8080"
+  Jwt__Issuer: "OficinaMecanicaBackend"
+  Jwt__Audience: "OficinaMecanicaBackend"
+  Jwt__AdminUsername: "admin"
+  Jwt__ExpiresInMinutes: "60"
+  # Nome da aplicação no New Relic APM (a licença vem do Secret api-secrets).
+  NEW_RELIC_APP_NAME: "oficina-mecanica-api"

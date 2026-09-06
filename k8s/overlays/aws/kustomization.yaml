@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Overlay de PRODUÇÃO (AWS/EKS): usa o RDS gerenciado (não o MySQL in-cluster) e
+# registra os pods no NLB interno via TargetGroupBinding. O Secret `api-secrets`
+# (connection string do RDS, chave JWT, licença New Relic) é criado pelo pipeline
+# a partir do AWS Secrets Manager — por isso NÃO é versionado aqui.
+namespace: oficina
+
+resources:
+  - ../../base
+  - configmap.yaml
+  - targetgroupbinding.yaml
+
+# A imagem é apontada para o ECR pelo pipeline: kustomize edit set image ...
+images:
+  - name: oficina-mecanica-api
+    newTag: latest
