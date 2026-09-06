@@ -1,0 +1,28 @@
+{
+  "name": "oficina-lambda-auth",
+  "version": "1.0.0",
+  "description": "Function Serverless de autenticação por CPF — valida o CPF, consulta o cliente no RDS e emite um JWT para consumo das APIs protegidas.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.658.0",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.11.3"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.145",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/node": "^22.7.4",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.6.2",
+    "vitest": "^2.1.1"
+  }
+}
