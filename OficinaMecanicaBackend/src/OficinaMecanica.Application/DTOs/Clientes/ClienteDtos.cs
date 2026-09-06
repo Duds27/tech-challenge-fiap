@@ -16,7 +16,8 @@ public record UpdateClienteDto(
     string? Telefone,
     string? Endereco,
     string? Cidade,
-    string? Estado
+    string? Estado,
+    bool Ativo = true
 );
 
 public record ClienteDto(
@@ -28,6 +29,7 @@ public record ClienteDto(
     string? Endereco,
     string? Cidade,
     string? Estado,
+    bool Ativo,
     DateTime DataCriacao,
     DateTime? DataAtualizacao
 );

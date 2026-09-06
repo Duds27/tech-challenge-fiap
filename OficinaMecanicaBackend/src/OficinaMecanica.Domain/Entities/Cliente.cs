@@ -10,6 +10,13 @@ public class Cliente
     public string? Endereco { get; set; }
     public string? Cidade { get; set; }
     public string? Estado { get; set; }
+
+    /// <summary>
+    /// Indica se o cliente está ativo. Clientes inativos não conseguem se
+    /// autenticar (a Function Serverless de autenticação por CPF rejeita o login).
+    /// </summary>
+    public bool Ativo { get; set; } = true;
+
     public DateTime DataCriacao { get; set; }
     public DateTime? DataAtualizacao { get; set; }
 

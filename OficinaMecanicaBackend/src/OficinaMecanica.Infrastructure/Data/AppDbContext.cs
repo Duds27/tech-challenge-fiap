@@ -25,6 +25,7 @@ public class AppDbContext : DbContext
             e.Property(c => c.Nome).HasMaxLength(200).IsRequired();
             e.Property(c => c.Email).HasMaxLength(150);
             e.Property(c => c.Telefone).HasMaxLength(20);
+            e.Property(c => c.Ativo).HasDefaultValue(true);
             e.HasIndex(c => c.CpfCnpj).IsUnique().HasDatabaseName("IX_Cliente_CpfCnpj");
         });
 

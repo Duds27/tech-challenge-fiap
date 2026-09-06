@@ -52,6 +52,7 @@ public class ClienteUseCases
             Endereco = dto.Endereco,
             Cidade = dto.Cidade,
             Estado = dto.Estado,
+            Ativo = true,
             DataCriacao = DateTime.UtcNow
         };
 
@@ -72,6 +73,7 @@ public class ClienteUseCases
         cliente.Endereco = dto.Endereco;
         cliente.Cidade = dto.Cidade;
         cliente.Estado = dto.Estado;
+        cliente.Ativo = dto.Ativo;
         cliente.DataAtualizacao = DateTime.UtcNow;
 
         await _uow.SalvarAsync();
@@ -97,6 +99,6 @@ public class ClienteUseCases
 
     private static ClienteDto ToDto(Cliente c) => new(
         c.Id, c.CpfCnpj, c.Nome, c.Email, c.Telefone,
-        c.Endereco, c.Cidade, c.Estado, c.DataCriacao, c.DataAtualizacao
+        c.Endereco, c.Cidade, c.Estado, c.Ativo, c.DataCriacao, c.DataAtualizacao
     );
 }
