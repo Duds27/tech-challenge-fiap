@@ -6,15 +6,19 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using OficinaMecanica.API.Middleware;
 using OficinaMecanica.Application;
 using OficinaMecanica.Application.Validators;
 using OficinaMecanica.Infrastructure;
 using OficinaMecanica.Infrastructure.Data;
 using Serilog;
+using Serilog.Formatting.Compact;
 
+// Logs estruturados em JSON (CompactJsonFormatter) para ingestão no New Relic /
+// agregadores de log, com correlação entre requisições via propriedade CorrelationId.
 Log.Logger = new LoggerConfiguration()
-    .WriteTo.Console()
-    .WriteTo.File("logs/app-.log", rollingInterval: RollingInterval.Day)
+    .WriteTo.Console(new CompactJsonFormatter())
+    .WriteTo.File(new CompactJsonFormatter(), "logs/app-.log", rollingInterval: RollingInterval.Day)
     .Enrich.FromLogContext()
     .CreateBootstrapLogger();
 
@@ -26,8 +30,8 @@ try
         .ReadFrom.Configuration(ctx.Configuration)
         .ReadFrom.Services(services)
         .Enrich.FromLogContext()
-        .WriteTo.Console()
-        .WriteTo.File("logs/app-.log", rollingInterval: RollingInterval.Day));
+        .WriteTo.Console(new CompactJsonFormatter())
+        .WriteTo.File(new CompactJsonFormatter(), "logs/app-.log", rollingInterval: RollingInterval.Day));
 
     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
         ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
@@ -142,7 +146,14 @@ try
     }
 
     app.UseHttpsRedirection();
-    app.UseSerilogRequestLogging();
+    // Correlação deve preceder o log de requisição para que o CorrelationId
+    // apareça no evento de conclusão da requisição.
+    app.UseMiddleware<CorrelationIdMiddleware>();
+    app.UseSerilogRequestLogging(options =>
+    {
+        options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+            diagnosticContext.Set("CorrelationId", httpContext.TraceIdentifier);
+    });
     app.UseAuthentication();
     app.UseAuthorization();
     app.MapControllers();
