@@ -1,0 +1,67 @@
+{
+  "name": "Oficina Mecânica — Fase 3",
+  "description": "Volume de OS, tempo por status, latência das APIs e erros/integrações.",
+  "permissions": "PUBLIC_READ_WRITE",
+  "pages": [
+    {
+      "name": "Operação da Oficina",
+      "description": "Substitua accountIds pelo ID da sua conta New Relic.",
+      "widgets": [
+        {
+          "title": "Volume diário de ordens de serviço",
+          "visualization": { "id": "viz.bar" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              { "accountIds": [0], "query": "SELECT count(*) FROM Log WHERE Evento = 'os_criada' FACET dateOf(timestamp) SINCE 7 days ago" }
+            ]
+          }
+        },
+        {
+          "title": "Tempo médio de execução (min) — Finalizadas",
+          "visualization": { "id": "viz.billboard" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              { "accountIds": [0], "query": "SELECT average(DuracaoExecucaoSegundos)/60 AS 'min' FROM Log WHERE Evento = 'os_status_alterado' AND StatusNovo = 'Finalizada' SINCE 1 day ago" }
+            ]
+          }
+        },
+        {
+          "title": "Transições por status",
+          "visualization": { "id": "viz.pie" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              { "accountIds": [0], "query": "SELECT count(*) FROM Log WHERE Evento = 'os_status_alterado' FACET StatusNovo SINCE 1 day ago" }
+            ]
+          }
+        },
+        {
+          "title": "Latência das APIs (p50/p95/p99)",
+          "visualization": { "id": "viz.line" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              { "accountIds": [0], "query": "SELECT percentile(duration, 50, 95, 99) FROM Transaction WHERE appName = 'oficina-mecanica-api' TIMESERIES" }
+            ]
+          }
+        },
+        {
+          "title": "Falhas no processamento de OS",
+          "visualization": { "id": "viz.line" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              { "accountIds": [0], "query": "SELECT count(*) FROM Log WHERE Evento = 'os_falha_processamento' TIMESERIES SINCE 1 day ago" }
+            ]
+          }
+        },
+        {
+          "title": "CPU/Memória por pod",
+          "visualization": { "id": "viz.line" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              { "accountIds": [0], "query": "SELECT average(cpuUsedCores), average(memoryWorkingSetBytes) FROM K8sContainerSample WHERE clusterName LIKE 'oficina-%' FACET podName TIMESERIES" }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

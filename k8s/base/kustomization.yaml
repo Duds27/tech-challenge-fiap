@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Núcleo cloud-agnóstico: namespace, Deployment/Service da API e HPA.
+# ConfigMap, Secret e banco são definidos por overlay (local vs AWS).
+resources:
+  - 00-namespace.yaml
+  - 30-api.yaml
+  - 40-hpa.yaml

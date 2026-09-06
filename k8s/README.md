@@ -27,10 +27,14 @@ automática via HPA.
 ## Aplicar
 
 ```bash
-kubectl apply -k k8s/
+# Local/kind (MySQL in-cluster): overlay "local"
+kubectl apply -k k8s/overlays/local
 kubectl -n oficina rollout status deploy/api
 kubectl -n oficina get pods,svc,hpa
 ```
+
+> **Produção (AWS/EKS):** use o overlay `k8s/overlays/aws` (RDS gerenciado + NLB via
+> TargetGroupBinding). O deploy é feito pelo pipeline do repositório `oficina-app`.
 
 ## Acessar a API localmente
 

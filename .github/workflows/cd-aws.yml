@@ -1,0 +1,76 @@
+name: CD (AWS/EKS)
+
+# Deploy automático da aplicação nas branches de homologação e produção.
+on:
+  push:
+    branches: [homolog, prod]
+  workflow_dispatch:
+
+permissions:
+  id-token: write # OIDC → assume role AWS
+  contents: read
+
+jobs:
+  deploy:
+    name: Build (ECR) + Deploy (EKS)
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name }}
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+      EKS_CLUSTER_NAME: ${{ vars.EKS_CLUSTER_NAME }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar credenciais AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login no ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build e push da imagem
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          TAG: ${{ github.sha }}
+        run: |
+          IMAGE="$REGISTRY/$ECR_REPOSITORY"
+          docker build -t "$IMAGE:$TAG" -t "$IMAGE:latest" OficinaMecanicaBackend
+          docker push "$IMAGE:$TAG"
+          docker push "$IMAGE:latest"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      - name: Configurar kubeconfig do EKS
+        run: aws eks update-kubeconfig --name "$EKS_CLUSTER_NAME" --region "$AWS_REGION"
+
+      - name: Criar/atualizar Secret a partir do Secrets Manager
+        run: |
+          DB=$(aws secretsmanager get-secret-value --secret-id "${{ vars.DB_SECRET_ID }}" --query SecretString --output text)
+          JWT=$(aws secretsmanager get-secret-value --secret-id "${{ vars.JWT_SECRET_ID }}" --query SecretString --output text)
+          HOST=$(echo "$DB" | jq -r .host);  PORT=$(echo "$DB" | jq -r .port)
+          USER=$(echo "$DB" | jq -r .username); PASS=$(echo "$DB" | jq -r .password)
+          NAME=$(echo "$DB" | jq -r .dbname)
+          CONN="Server=$HOST;Port=$PORT;Database=$NAME;User=$USER;Password=$PASS;"
+          kubectl create namespace oficina --dry-run=client -o yaml | kubectl apply -f -
+          kubectl -n oficina create secret generic api-secrets \
+            --from-literal=ConnectionStrings__DefaultConnection="$CONN" \
+            --from-literal=Jwt__Key="$(echo "$JWT" | jq -r .key)" \
+            --from-literal=NEW_RELIC_LICENSE_KEY="${{ secrets.NEW_RELIC_LICENSE_KEY }}" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy (kustomize overlay AWS)
+        working-directory: k8s/overlays/aws
+        env:
+          TAG: ${{ github.sha }}
+        run: |
+          # Aponta a imagem para o ECR e injeta o ARN do target group (output do infra-k8s).
+          kustomize edit set image "oficina-mecanica-api=${IMAGE}:${TAG}"
+          sed -i "s|__APP_TARGET_GROUP_ARN__|${{ vars.APP_TARGET_GROUP_ARN }}|g" targetgroupbinding.yaml
+          kubectl apply -k .
+          kubectl -n oficina rollout status deployment/api --timeout=300s
+
+      - name: Verificar recursos
+        run: kubectl -n oficina get pods,svc,hpa,targetgroupbinding

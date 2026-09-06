@@ -64,11 +64,11 @@ resource "null_resource" "apply_manifests" {
 
   triggers = {
     cluster   = kind_cluster.this.name
-    manifests = filesha256("${local.k8s_dir}/kustomization.yaml")
+    manifests = filesha256("${local.k8s_dir}/overlays/local/kustomization.yaml")
   }
 
   provisioner "local-exec" {
-    command = "kubectl apply -k ${local.k8s_dir}"
+    command = "kubectl apply -k ${local.k8s_dir}/overlays/local"
     environment = {
       KUBECONFIG = kind_cluster.this.kubeconfig_path
     }
