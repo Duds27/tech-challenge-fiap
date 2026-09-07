@@ -4,6 +4,32 @@ API REST para gestão de uma oficina mecânica de médio porte, desenvolvida com
 
 ---
 
+## Fase 3 — Operação Corporativa em Nuvem (segurança, escala e observabilidade)
+
+A Fase 3 leva a aplicação a operação corporativa na **AWS**, com autenticação por CPF via
+serverless, infraestrutura como código, CI/CD por repositório e observabilidade completa.
+
+### O que foi entregue
+
+| Requisito | Entrega |
+| --- | --- |
+| **Autenticação por CPF + API Gateway** | Function serverless (Node/TS) valida CPF, consulta o cliente e emite JWT; Lambda Authorizer protege `/api/*`. Ver [`lambda-auth/`](lambda-auth). |
+| **Function Serverless (JWT)** | AWS Lambda + API Gateway (HTTP API), IaC em [`lambda-auth/terraform`](lambda-auth/terraform). |
+| **4 repositórios com CI/CD** | `oficina-app` (este), `oficina-lambda-auth`, `oficina-infra-k8s`, `oficina-infra-database`. Split: [docs/fase3-entrega.md](docs/fase3-entrega.md). |
+| **Banco gerenciado (Terraform)** | Amazon RDS for MySQL Multi-AZ em [`infra-database/`](infra-database). |
+| **Cluster K8s escalável (Terraform)** | VPC + EKS + HPA + add-ons em [`infra-k8s/`](infra-k8s). |
+| **Observabilidade (New Relic)** | APM + infra + logs JSON + dashboards + alertas. Ver [docs/observability](docs/observability). |
+| **Logs estruturados + correlação** | Serilog `CompactJsonFormatter` + middleware `X-Correlation-ID`. |
+| **Documentação arquitetural** | Componentes, sequência, RFCs, ADRs e modelo ER: [docs/architecture](docs/architecture). |
+
+### Deploy em produção (AWS/EKS)
+
+O app usa o overlay `k8s/overlays/aws` (RDS + NLB via TargetGroupBinding); o deploy é
+automático pelas branches `homolog`/`prod` (`.github/workflows/cd-aws.yml`). Detalhes e
+pré-requisitos: [docs/fase3-entrega.md](docs/fase3-entrega.md).
+
+---
+
 ## Fase 2 — Infraestrutura, Escalabilidade e Automação
 
 A Fase 2 evolui a aplicação da Fase 1 para garantir **qualidade, resiliência e
