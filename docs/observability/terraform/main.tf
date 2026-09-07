@@ -39,10 +39,10 @@ resource "newrelic_alert_policy" "oficina" {
 
 # Latência das APIs (p95 > 1s por 5 min).
 resource "newrelic_nrql_alert_condition" "latencia" {
-  policy_id   = newrelic_alert_policy.oficina.id
-  name        = "Latência alta das APIs (p95)"
-  type        = "static"
-  enabled     = true
+  policy_id          = newrelic_alert_policy.oficina.id
+  name               = "Latência alta das APIs (p95)"
+  type               = "static"
+  enabled            = true
   aggregation_window = 60
 
   nrql {
