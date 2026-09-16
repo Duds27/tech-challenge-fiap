@@ -71,16 +71,17 @@ resource "aws_db_instance" "this" {
   port     = 3306
 
   allocated_storage    = var.allocated_storage
-  storage_type         = "gp3"
+  storage_type         = var.free_tier ? "gp2" : "gp3"
   storage_encrypted    = true
-  multi_az             = var.multi_az
+  multi_az             = var.free_tier ? false : var.multi_az
   db_subnet_group_name = aws_db_subnet_group.this.name
   parameter_group_name = aws_db_parameter_group.this.name
 
   vpc_security_group_ids = [aws_security_group.db.id]
   publicly_accessible    = false
 
-  backup_retention_period = 7
+  # Free Plan não permite retenção de backup; em conta paga usa 7 dias.
+  backup_retention_period = var.free_tier ? 0 : 7
   deletion_protection     = var.environment == "prod"
   skip_final_snapshot     = var.environment != "prod"
   apply_immediately       = true
