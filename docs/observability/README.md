@@ -41,6 +41,10 @@ SELECT average(cpuUsedCores), average(memoryWorkingSetBytes)
 FROM K8sContainerSample WHERE clusterName LIKE 'oficina-%' FACET podName TIMESERIES
 ```
 
+> 💡 **No AWS Free Tier (t3.micro)** o `nri-bundle` não cabe (Helm estoura o timeout).
+> Estratégia recomendada: **APM do app** para latência/erros/traces/logs + `kubectl top`
+> para CPU/memória. Detalhes em [aws-setup.md §7.1](../aws-setup.md).
+
 ## Como aplicar
 
 - **Dashboard:** importe [`newrelic-dashboard.json`](newrelic-dashboard.json) em

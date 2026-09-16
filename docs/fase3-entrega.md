@@ -32,8 +32,27 @@ git push -u origin main
 Repita para `infra-k8s`, `infra-database`. O `oficina-app` pode ser o histórico atual
 (remova as pastas migradas antes de finalizar): `git rm -r lambda-auth infra-k8s infra-database`.
 
-> Alternativa preservando histórico por pasta: `git subtree split -P <pasta> -b <branch>`
-> e depois `git push <repo> <branch>:main`.
+> ⚠️ **Crie cada repositório VAZIO no GitHub** — NÃO marque "Add a README/.gitignore/license".
+> Se o repo já tiver um commit inicial, o `git push` falha com `! [rejected] ... (fetch first)`
+> porque o push não é _fast-forward_. Soluções: (a) recriar o repo vazio; (b) `git push --force`
+> (só em repo recém-criado, sobrescreve o README autogerado); (c) preservar o commit inicial com
+> `git fetch <repo> main` + `git merge --allow-unrelated-histories FETCH_HEAD` antes do push.
+
+### Alternativa: split preservando histórico por pasta
+
+Gera um branch cuja **raiz** é o conteúdo da pasta e o envia ao repo correspondente. **Atenção:
+cada pasta vai para o SEU repo** (não troque o destino):
+
+```bash
+git subtree split -P lambda-auth    -b split-lambda-auth
+git push https://github.com/<org>/oficina-lambda-auth.git    split-lambda-auth:main
+
+git subtree split -P infra-k8s      -b split-infra-k8s
+git push https://github.com/<org>/oficina-infra-k8s.git      split-infra-k8s:main
+
+git subtree split -P infra-database -b split-infra-database
+git push https://github.com/<org>/oficina-infra-database.git split-infra-database:main
+```
 
 ## Regras de proteção de branch (nos 4 repositórios)
 
