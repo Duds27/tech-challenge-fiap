@@ -21,7 +21,7 @@ Documentação da arquitetura corporativa em nuvem da Oficina Mecânica.
 
 | Repositório | Papel |
 | --- | --- |
-| `oficina-lambda-auth` | Function Serverless de autenticação por CPF + API Gateway |
-| `oficina-infra-k8s` | Terraform: VPC + EKS + add-ons |
-| `oficina-infra-database` | Terraform: RDS MySQL gerenciado |
-| `oficina-app` | Aplicação .NET (Clean Architecture) + manifestos K8s |
+| [`oficina-lambda-auth`](https://github.com/Duds27/oficina-lambda-auth) | Function Serverless de autenticação por CPF + API Gateway |
+| [`oficina-infra-k8s`](https://github.com/Duds27/oficina-infra-k8s) | Terraform: VPC + EKS + add-ons |
+| [`oficina-infra-database`](https://github.com/Duds27/oficina-infra-database) | Terraform: RDS MySQL gerenciado |
+| [`oficina-app`](https://github.com/Duds27/tech-challenge-fiap) | Aplicação .NET (Clean Architecture) + manifestos K8s |
