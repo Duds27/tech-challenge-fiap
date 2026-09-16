@@ -1,8 +1,0 @@
-node_modules/
-dist/
-*.zip
-.terraform/
-*.tfstate
-*.tfstate.*
-.terraform.lock.hcl
-coverage/
