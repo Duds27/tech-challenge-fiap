@@ -22,7 +22,7 @@ variable "state_bucket" {
 
 variable "jwt_secret_id" {
   type        = string
-  description = "ARN/nome do secret (Secrets Manager) com a chave do JWT: {\"key\":\"...\"}."
+  description = "Nome/ID do secret (Secrets Manager) com a chave do JWT: {\"key\":\"...\"}. Use o nome (ex.: oficina/jwt), não o ARN — o Terraform resolve o ARN."
 }
 
 variable "jwt_issuer" {
