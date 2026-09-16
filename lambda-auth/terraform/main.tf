@@ -45,10 +45,15 @@ resource "aws_iam_role_policy_attachment" "vpc" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }
 
+# Resolve o ARN completo do secret do JWT a partir do nome/ID (IAM exige ARN em Resource).
+data "aws_secretsmanager_secret" "jwt" {
+  name = var.jwt_secret_id
+}
+
 data "aws_iam_policy_document" "secrets" {
   statement {
     actions   = ["secretsmanager:GetSecretValue"]
-    resources = [var.jwt_secret_id, data.terraform_remote_state.database.outputs.db_secret_arn]
+    resources = [data.aws_secretsmanager_secret.jwt.arn, data.terraform_remote_state.database.outputs.db_secret_arn]
   }
 }
 
