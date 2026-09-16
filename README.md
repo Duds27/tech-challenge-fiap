@@ -28,6 +28,8 @@ O app usa o overlay `k8s/overlays/aws` (RDS + NLB via TargetGroupBinding); o dep
 automático pelas branches `homolog`/`prod` (`.github/workflows/cd-aws.yml`). Detalhes e
 pré-requisitos: [docs/fase3-entrega.md](docs/fase3-entrega.md).
 
+- 🚀 **Provisionar a infra na AWS (passo a passo):** [docs/aws-setup.md](docs/aws-setup.md).
+
 ---
 
 ## Fase 2 — Infraestrutura, Escalabilidade e Automação
