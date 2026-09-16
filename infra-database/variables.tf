@@ -41,5 +41,11 @@ variable "allocated_storage" {
 variable "multi_az" {
   type        = bool
   default     = true
-  description = "Alta disponibilidade (failover automático)."
+  description = "Alta disponibilidade (failover automático). Ignorado quando free_tier = true."
+}
+
+variable "free_tier" {
+  type        = bool
+  default     = true
+  description = "Ajusta o RDS aos limites do AWS Free Plan: single-AZ, sem retenção de backup e storage gp2. Em conta paga, defina false para HA e backups."
 }
