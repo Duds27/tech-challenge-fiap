@@ -1,6 +1,6 @@
 # Registra os pods do Service `api` como alvos IP do NLB interno provisionado pelo
 # repo infra-k8s (output app_target_group_arn). O AWS Load Balancer Controller
-# reconcilia os endpoints. O pipeline substitui __APP_TARGET_GROUP_ARN__ pelo ARN real.
+# reconcilia os endpoints. O pipeline substitui arn:aws:elasticloadbalancing:us-east-1:411918631457:targetgroup/oficina-homolog-app-tg/b4c6d0d9d32e9e92 pelo ARN real.
 apiVersion: elbv2.k8s.aws/v1beta1
 kind: TargetGroupBinding
 metadata:
@@ -13,4 +13,4 @@ spec:
     name: api
     port: 80
   targetType: ip
-  targetGroupARN: __APP_TARGET_GROUP_ARN__
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:411918631457:targetgroup/oficina-homolog-app-tg/b4c6d0d9d32e9e92

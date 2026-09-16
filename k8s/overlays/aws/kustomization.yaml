@@ -8,11 +8,12 @@ kind: Kustomization
 namespace: oficina
 
 resources:
-  - ../../base
-  - configmap.yaml
-  - targetgroupbinding.yaml
+- ../../base
+- configmap.yaml
+- targetgroupbinding.yaml
 
 # A imagem é apontada para o ECR pelo pipeline: kustomize edit set image ...
 images:
-  - name: oficina-mecanica-api
-    newTag: latest
+- name: oficina-mecanica-api
+  newName: 411918631457.dkr.ecr.us-east-1.amazonaws.com/oficina-mecanica-api
+  newTag: latest
