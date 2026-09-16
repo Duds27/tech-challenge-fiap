@@ -19,13 +19,19 @@ variable "vpc_cidr" {
 }
 
 variable "kubernetes_version" {
+  # Use uma versão em suporte no EKS (as antigas perdem as AMIs dos nós).
+  # Verifique as disponíveis com:
+  #   aws eks describe-cluster-versions --query "clusterVersions[?status=='STANDARD_SUPPORT'].clusterVersion" --output table
   type    = string
-  default = "1.30"
+  default = "1.36"
 }
 
 variable "node_instance_types" {
+  # t3.micro é free-tier-eligible (contas no Free Plan bloqueiam tipos maiores).
+  # Requer prefix delegation na VPC CNI (ver cluster_addons no main.tf) para caber
+  # os pods. Em conta paga, prefira t3.small/t3.medium.
   type    = list(string)
-  default = ["t3.medium"]
+  default = ["t3.micro"]
 }
 
 variable "node_min_size" {
@@ -41,6 +47,14 @@ variable "node_max_size" {
 variable "node_desired_size" {
   type    = number
   default = 2
+}
+
+variable "node_max_pods" {
+  # Eleva o teto de pods/nó (o t3.micro vem com 4). Requer prefix delegation na VPC CNI
+  # (já habilitado em cluster_addons). ~34 é o teto teórico do t3.micro; 17 dá folga
+  # segura — na prática a memória (1 GiB) é o limite real.
+  type    = number
+  default = 17
 }
 
 variable "newrelic_license_key" {

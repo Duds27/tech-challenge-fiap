@@ -48,12 +48,68 @@ module "eks" {
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
 
+  # Addons gerenciados. Prefix delegation na VPC CNI eleva o limite de pods/nó —
+  # essencial em instâncias pequenas (t3.micro só teria ~4 IPs/pods sem isso).
+  # before_compute garante que a config vale desde o primeiro nó.
+  cluster_addons = {
+    vpc-cni = {
+      before_compute              = true
+      most_recent                 = true
+      resolve_conflicts_on_create = "OVERWRITE"
+      configuration_values = jsonencode({
+        env = {
+          ENABLE_PREFIX_DELEGATION = "true"
+          WARM_PREFIX_TARGET       = "1"
+        }
+      })
+    }
+    kube-proxy = { most_recent = true }
+    coredns = {
+      most_recent = true
+      # 1 réplica economiza recursos no free tier (sem HA de DNS).
+      configuration_values = jsonencode({ replicaCount = 1 })
+    }
+  }
+
   eks_managed_node_groups = {
     default = {
+      # Família de AMI atual do EKS (Amazon Linux 2023). AL2 foi descontinuada.
+      ami_type       = "AL2023_x86_64_STANDARD"
       instance_types = var.node_instance_types
       min_size       = var.node_min_size
       max_size       = var.node_max_size
       desired_size   = var.node_desired_size
+
+      # Eleva o max-pods do kubelet via NodeConfig do nodeadm (AL2023). Sem isso, o
+      # t3.micro fica preso em 4 pods/nó ("Too many pods"), mesmo com prefix delegation.
+      cloudinit_pre_nodeadm = [{
+        content_type = "application/node.eks.aws"
+        content = yamlencode({
+          apiVersion = "node.eks.aws/v1alpha1"
+          kind       = "NodeConfig"
+          spec = {
+            kubelet = {
+              config = {
+                maxPods = var.node_max_pods
+              }
+            }
+          }
+        })
+      }]
+    }
+  }
+
+  # Libera o health check + tráfego do NLB interno até os pods na porta 8080.
+  # Sem esta regra, o SG dos nós bloqueia o health check e os alvos ficam "unhealthy"
+  # (API Gateway devolve 503). O NLB fica na VPC, então liberamos a CIDR da VPC.
+  node_security_group_additional_rules = {
+    nlb_to_pods_8080 = {
+      description = "NLB health check e trafego para os pods da API"
+      protocol    = "tcp"
+      from_port   = 8080
+      to_port     = 8080
+      type        = "ingress"
+      cidr_blocks = [var.vpc_cidr]
     }
   }
 
