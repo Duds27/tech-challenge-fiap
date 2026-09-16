@@ -59,6 +59,11 @@ resource "helm_release" "aws_lb_controller" {
     name  = "vpcId"
     value = module.vpc.vpc_id
   }
+  # 1 réplica (o padrão é 2) — economiza recursos em nós pequenos (free tier).
+  set {
+    name  = "replicaCount"
+    value = "1"
+  }
 
   depends_on = [module.eks, helm_release.metrics_server]
 }
